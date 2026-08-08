@@ -42,7 +42,6 @@ export function DownloadCta() {
           <LiveBadge label="Servers up" />
           <span className="text-[13px] text-rose">
             <span ref={countRef} className="stat-num text-[15px]">
-              {/* Settled figure for the prerendered HTML. See Hero.tsx. */}
               {online.value.toLocaleString("en-US")}
             </span>{" "}
             players online right now

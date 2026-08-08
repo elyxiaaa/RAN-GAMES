@@ -6,9 +6,6 @@
     "types": ["node"],
     "skipLibCheck": true,
 
-    // Bundler resolution, not nodenext: vite.config.ts and the plugin are
-    // transpiled by esbuild, and the plugin shares src/data/seo.ts with the
-    // app project, which resolves extensionless relative imports.
     "module": "esnext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

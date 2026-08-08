@@ -316,9 +316,6 @@ function ReadoutItem({
             accent ? "text-white" : "text-blush"
           }`}
         >
-          {/* The settled figure, not 0. useLiveCount rewrites this on mount
-              and animates up, but the prerendered HTML a crawler reads must
-              not state that nobody is online. */}
           {value.toLocaleString("en-US")}
         </dd>
         <dt className="label mt-1.5 text-[9px] text-rose">{label}</dt>

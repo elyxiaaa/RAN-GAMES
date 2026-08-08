@@ -1,10 +1,3 @@
-/**
- * Post-build step: injects the server-rendered markup into dist/index.html.
- *
- * Runs after both `vite build` (client, writes dist/) and
- * `vite build --ssr src/entry-server.tsx --outDir dist-ssr`.
- */
-
 import { readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";

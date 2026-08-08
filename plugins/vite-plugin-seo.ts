@@ -1,15 +1,3 @@
-/**
- * Generates every SEO surface from [src/data/seo.ts](../src/data/seo.ts).
- *
- *   build  — injects <head> tags into index.html, emits robots.txt,
- *            sitemap.xml and llms.txt into dist/
- *   dev    — serves the same three files from memory, so what you test at
- *            localhost is what ships
- *
- * Nothing here is site-specific. Clone the repo, edit seo.ts, and this file
- * keeps working untouched.
- */
-
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Plugin } from "vite";
@@ -40,10 +28,6 @@ export function seo(): Plugin {
 
       if (config.command !== "build" || isSsrBuild) return;
 
-      // Always announce the origin being baked in. A clone that forgets to
-      // change SITE.url would point its canonical, og:url and sitemap at the
-      // domain it was copied from, which reads to Google as "the other site is
-      // the original" — the one SEO mistake here that is both silent and fatal.
       config.logger.info(`seo: baking canonical origin ${SITE.url}`);
 
       if (!/^https:\/\/[^/]+$/.test(SITE.url)) {
@@ -65,11 +49,7 @@ export function seo(): Plugin {
     transformIndexHtml: {
       order: "pre",
       handler: (html) => ({
-        // Keeps <html lang> honest when a clone changes SITE.lang, so the
-        // declared language cannot drift from the one in the schema and OG tags.
         html: html.replace(/(<html[^>]*\slang=")[^"]*(")/i, `$1${SITE.lang}$2`),
-        // Explicit injectTo on every tag, so nothing lands ahead of the charset
-        // declaration that has to stay inside the first 1024 bytes.
         tags: buildHeadTags().map((tag) => ({
           ...tag,
           injectTo: tag.injectTo ?? ("head" as const),
@@ -77,8 +57,6 @@ export function seo(): Plugin {
       }),
     },
 
-    // Dev parity: without this, /robots.txt 404s locally and only appears
-    // after a production build, which is exactly when nobody checks it.
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const name = (req.url ?? "").split("?")[0].replace(/^\//, "");

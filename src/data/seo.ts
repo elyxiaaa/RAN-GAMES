@@ -1,20 +1,3 @@
-/**
- * SEO single source of truth.
- *
- * This is the ONLY file you edit when you clone this template for a new
- * server. Everything downstream is generated from it at build time by
- * [plugins/vite-plugin-seo.ts](../../plugins/vite-plugin-seo.ts):
- *
- *   - the entire <head> of index.html (title, canonical, OG, Twitter, JSON-LD)
- *   - public-facing /robots.txt
- *   - public-facing /sitemap.xml
- *   - public-facing /llms.txt
- *
- * Facts that also appear on the page (rates, specs, realms, download size)
- * are imported from [content.ts](content.ts) rather than retyped here, so the
- * structured data can never drift out of sync with what a visitor reads.
- */
-
 import {
   BRAND,
   DOWNLOAD_META,
@@ -28,36 +11,22 @@ import {
   TIERS,
 } from "./content.ts";
 
-/* -------------------------------------------------------------------------- */
-/* 1. Site identity — change these                                            */
-/* -------------------------------------------------------------------------- */
-
 export const SITE = {
-  /** Canonical origin. No trailing slash. Change this first. */
-  url: "https://ranreturns.com",
+  url: "https://ranonline-egames.com",
 
-  /** Full brand name, used in og:site_name and Organization schema. */
   name: "Ran Online Official",
 
-  /** Short form, used where space is tight. */
   shortName: "Ran Online",
 
   lang: "en",
   locale: "en_US",
   themeColor: "#0A0707",
 
-  /** Keep under 60 characters or Google truncates it in the SERP. */
   title: "Ran Online Official | Episode 3 Server, Free PC MMORPG",
 
-  /** Keep between 120 and 158 characters. */
   description:
     "Episode 3 is live on Strife. Pure hunt progression, a player run economy, campus factions and zero pay to win. Free Ran Online client for Windows PC.",
 
-  /**
-   * Social share card. Ideal is a purpose-built 1200x630 JPG or PNG at
-   * /images/og-cover.jpg. The 16:9 in-game still below is a working stand-in;
-   * the build warns if this file is missing from public/.
-   */
   ogImage: "/images/legend-status.webp",
   ogImageType: "image/webp",
   ogImageWidth: 1920,
@@ -65,35 +34,22 @@ export const SITE = {
   ogImageAlt:
     "Ran Online Episode 3, campus fighters massed on the field after dark",
 
-  /** "@handle" if the server has an X account, otherwise leave empty. */
   twitterSite: "",
 
-  /** Where the client actually downloads from. Used in VideoGame schema. */
   downloadUrl: "/#download",
 
-  /**
-   * Set this once you have a real trailer, and a VideoObject node is added to
-   * the JSON-LD graph. Leave null while LINKS.trailer is a placeholder —
-   * marking up a video that is not on the page is a structured-data violation.
-   */
   trailer: null as null | {
     name: string;
     description: string;
-    /** ISO 8601, e.g. "2026-01-14" */
     uploadDate: string;
     thumbnailUrl: string;
     embedUrl: string;
   },
 } as const;
 
-/**
- * Every indexable URL. A single-page site has one entry; add more as the
- * template grows real routes. Anchors (#download) never belong in a sitemap.
- */
 export const SEO_ROUTES: {
   path: string;
   priority?: number;
-  /** Surfaced to Google Images via the sitemap image extension. */
   images?: { loc: string; caption: string }[];
 }[] = [
   {
@@ -106,33 +62,21 @@ export const SEO_ROUTES: {
   },
 ];
 
-/**
- * AI and search crawlers granted explicit access in robots.txt.
- *
- * A bot that matches its own User-agent group ignores the wildcard group
- * entirely, so listing them here is what keeps the grant unambiguous. Move a
- * name out of this array and into BLOCKED_CRAWLERS to shut it out.
- */
 export const ALLOWED_CRAWLERS = [
-  // Search
   "Googlebot",
   "Google-Extended",
   "Bingbot",
   "DuckDuckBot",
   "Applebot",
   "Applebot-Extended",
-  // OpenAI
   "GPTBot",
   "OAI-SearchBot",
   "ChatGPT-User",
-  // Anthropic
   "ClaudeBot",
   "Claude-SearchBot",
   "Claude-User",
-  // Perplexity
   "PerplexityBot",
   "Perplexity-User",
-  // Others
   "Meta-ExternalAgent",
   "Amazonbot",
   "DuckAssistBot",
@@ -140,16 +84,10 @@ export const ALLOWED_CRAWLERS = [
   "YouBot",
 ];
 
-/** Crawlers denied in robots.txt. Empty by default. */
 export const BLOCKED_CRAWLERS: string[] = [];
-
-/* -------------------------------------------------------------------------- */
-/* 2. Derived values — you should not need to touch anything below            */
-/* -------------------------------------------------------------------------- */
 
 const ORIGIN = SITE.url.replace(/\/+$/, "");
 
-/** Turns "/images/x.webp" into "https://example.com/images/x.webp". */
 export function abs(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
   return ORIGIN + (path.startsWith("/") ? path : `/${path}`);
@@ -163,11 +101,6 @@ const ID = {
   image: `${ORIGIN}/#primaryimage`,
 };
 
-/**
- * A bare origin like "https://discord.gg/" is the template's unfilled
- * placeholder. Publishing it as an Organization sameAs would claim a profile
- * that is not ours, so only URLs with a real path survive.
- */
 function isRealProfile(href: string): boolean {
   try {
     return new URL(href).pathname.replace(/\/+$/, "").length > 0;
@@ -185,14 +118,6 @@ const minimum = MIN_SPECS.find((group) => group.id === "minimum");
 const specValue = (label: string) =>
   minimum?.rows.find((row) => row.label === label)?.value;
 
-/* -------------------------------------------------------------------------- */
-/* 3. Structured data (JSON-LD)                                               */
-/* -------------------------------------------------------------------------- */
-
-/**
- * One @graph rather than several loose <script> blocks, so every node can
- * reference the others by @id and search engines resolve a single entity map.
- */
 export function buildStructuredData(): Record<string, unknown> {
   const graph: Record<string, unknown>[] = [
     {
@@ -238,8 +163,6 @@ export function buildStructuredData(): Record<string, unknown> {
       primaryImageOfPage: { "@id": ID.image },
     },
     {
-      // VideoGame extends both SoftwareApplication and CreativeWork, so the
-      // client download details belong on this node rather than a second one.
       "@type": "VideoGame",
       "@id": ID.game,
       name: `${BRAND.name} ${BRAND.suffix}`,
@@ -302,11 +225,6 @@ export function buildStructuredData(): Record<string, unknown> {
   return { "@context": "https://schema.org", "@graph": graph };
 }
 
-/* -------------------------------------------------------------------------- */
-/* 4. <head> tags                                                             */
-/* -------------------------------------------------------------------------- */
-
-/** Structurally compatible with Vite's HtmlTagDescriptor. */
 export type HeadTag = {
   tag: string;
   attrs?: Record<string, string | boolean>;
@@ -322,9 +240,6 @@ export function buildHeadTags(): HeadTag[] {
     { tag: "meta", attrs: { name: "description", content: SITE.description } },
     { tag: "link", attrs: { rel: "canonical", href: `${ORIGIN}/` } },
 
-    // max-snippet:-1 and max-image-preview:large are what let Google show a
-    // full-length snippet and a large thumbnail, and what most AI Overview
-    // surfaces check before quoting a page at length.
     {
       tag: "meta",
       attrs: {
@@ -388,8 +303,6 @@ export function buildHeadTags(): HeadTag[] {
       attrs: { name: "twitter:image:alt", content: SITE.ogImageAlt },
     },
 
-    // The trailer iframe is only created on click, so a full preconnect would
-    // hold an unused socket. DNS resolution is the cheap half of the win.
     {
       tag: "link",
       attrs: { rel: "dns-prefetch", href: "https://www.youtube-nocookie.com" },
@@ -412,10 +325,6 @@ export function buildHeadTags(): HeadTag[] {
 
   return tags;
 }
-
-/* -------------------------------------------------------------------------- */
-/* 5. robots.txt                                                              */
-/* -------------------------------------------------------------------------- */
 
 export function buildRobotsTxt(): string {
   const lines = [
@@ -442,10 +351,6 @@ export function buildRobotsTxt(): string {
   lines.push("", `Sitemap: ${ORIGIN}/sitemap.xml`, "");
   return lines.join("\n");
 }
-
-/* -------------------------------------------------------------------------- */
-/* 6. sitemap.xml                                                             */
-/* -------------------------------------------------------------------------- */
 
 const xmlEscape = (value: string) =>
   value
@@ -487,17 +392,6 @@ export function buildSitemap(lastmod = new Date().toISOString().slice(0, 10)): s
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* 7. llms.txt                                                                */
-/* -------------------------------------------------------------------------- */
-
-/**
- * A plain-text brief for language models, per llmstxt.org.
- *
- * The prerendered HTML already carries this information, but llms.txt gives an
- * assistant the facts with no markup to wade through, which measurably raises
- * the odds of being quoted accurately rather than paraphrased wrong.
- */
 export function buildLlmsTxt(): string {
   const live = REALMS.filter((realm) => realm.status === "live");
   const rates = SERVER_FEATURES.find((group) => group.id === "rates");
