@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 76px;
+  }
+
+  body {
+    @apply bg-ink font-body text-rose antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-blush;
+  }
+
+  ::selection {
+    background-color: #e01f2d;
+    color: #ffffff;
+  }
+
+  :focus-visible {
+    outline: 2px solid #ff3b47;
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .notch {
+    clip-path: polygon(
+      0 0,
+      calc(100% - 18px) 0,
+      100% 18px,
+      100% 100%,
+      18px 100%,
+      0 calc(100% - 18px)
+    );
+  }
+
+  .notch-sm {
+    clip-path: polygon(
+      0 0,
+      calc(100% - 11px) 0,
+      100% 11px,
+      100% 100%,
+      11px 100%,
+      0 calc(100% - 11px)
+    );
+  }
+
+  .display {
+    @apply font-display font-bold uppercase leading-[0.92] tracking-brand text-blush;
+  }
+
+  .label {
+    @apply font-display text-[11px] font-semibold uppercase tracking-label;
+  }
+
+  .stat-num {
+    @apply font-display font-bold tabular-nums text-blush;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .brand-outline {
+    color: rgba(255, 226, 226, 0.08);
+    -webkit-text-stroke: 2px rgba(255, 168, 174, 0.95);
+    text-shadow:
+      0 0 4px rgba(8, 3, 4, 0.92),
+      0 0 18px rgba(8, 3, 4, 0.7),
+      0 0 70px rgba(255, 42, 56, 0.45);
+  }
+
+  @media (min-width: 1024px) {
+    .brand-outline {
+      -webkit-text-stroke-width: 3px;
+    }
+  }
+
+  @supports not (-webkit-text-stroke: 1px red) {
+    .brand-outline {
+      color: rgba(255, 168, 174, 0.62);
+    }
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scanlines {
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.42) 0px,
+      rgba(0, 0, 0, 0.42) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+
+  .duotone {
+    filter: grayscale(1) contrast(1.18) brightness(0.62);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
