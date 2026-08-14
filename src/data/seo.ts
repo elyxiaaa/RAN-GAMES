@@ -14,7 +14,7 @@ import {
 export const SITE = {
   url: "https://ranonline-egames.com",
 
-  name: "Ran Online Official",
+  name: "Ran Online E-games",
 
   shortName: "Ran Online",
 
@@ -22,10 +22,10 @@ export const SITE = {
   locale: "en_US",
   themeColor: "#0A0707",
 
-  title: "Ran Online Official | Episode 3 Server, Free PC MMORPG",
+  title: "Ran Online E-games | Episode 3 Server, Free PC MMORPG",
 
   description:
-    "Episode 3 is live on Strife. Pure hunt progression, a player run economy, campus factions and zero pay to win. Free Ran Online client for Windows PC.",
+    "Ran Online E-games runs Episode 3 on Strife. Pure hunt progression, a player run economy, campus factions and zero pay to win. Free client for Windows PC.",
 
   ogImage: "/images/legend-status.webp",
   ogImageType: "image/webp",
@@ -47,6 +47,31 @@ export const SITE = {
   },
 } as const;
 
+/**
+ * Per page head copy. Every route that ships its own HTML file needs an entry
+ * here, or it inherits the home page title and canonical.
+ */
+export const PAGES: Record<
+  string,
+  { name: string; title: string; description: string }
+> = {
+  "/": {
+    name: "Home",
+    title: SITE.title,
+    description: SITE.description,
+  },
+  "/ranking": {
+    name: "Rankings",
+    title: "Rankings | Ran Online E-games League, Gold, Guild and PK Map",
+    description:
+      "Live Ran Online E-games rankings on Strife. League standings by class, top gold, guild power and the PK map kill boards, rebuilt every 10 minutes.",
+  },
+};
+
+export function pageMeta(path: string) {
+  return PAGES[path] ?? PAGES["/"];
+}
+
 export const SEO_ROUTES: {
   path: string;
   priority?: number;
@@ -60,6 +85,7 @@ export const SEO_ROUTES: {
       ...SHOWCASE.map((shot) => ({ loc: shot.src, caption: shot.caption })),
     ],
   },
+  { path: "/ranking", priority: 0.8 },
 ];
 
 export const ALLOWED_CRAWLERS = [
@@ -95,11 +121,17 @@ export function abs(path: string): string {
 
 const ID = {
   website: `${ORIGIN}/#website`,
-  webpage: `${ORIGIN}/#webpage`,
   organization: `${ORIGIN}/#organization`,
   game: `${ORIGIN}/#game`,
   image: `${ORIGIN}/#primaryimage`,
 };
+
+/** Canonical URL for a route. Only the home page carries a trailing slash. */
+export function canonical(path: string): string {
+  return path === "/" ? `${ORIGIN}/` : `${ORIGIN}${path}`;
+}
+
+const webpageId = (path: string) => `${canonical(path)}#webpage`;
 
 function isRealProfile(href: string): boolean {
   try {
@@ -118,7 +150,10 @@ const minimum = MIN_SPECS.find((group) => group.id === "minimum");
 const specValue = (label: string) =>
   minimum?.rows.find((row) => row.label === label)?.value;
 
-export function buildStructuredData(): Record<string, unknown> {
+export function buildStructuredData(path = "/"): Record<string, unknown> {
+  const page = pageMeta(path);
+  const url = canonical(path);
+
   const graph: Record<string, unknown>[] = [
     {
       "@type": "WebSite",
@@ -153,20 +188,23 @@ export function buildStructuredData(): Record<string, unknown> {
     },
     {
       "@type": "WebPage",
-      "@id": ID.webpage,
-      url: `${ORIGIN}/`,
-      name: SITE.title,
-      description: SITE.description,
+      "@id": webpageId(path),
+      url,
+      name: page.title,
+      description: page.description,
       inLanguage: SITE.lang,
       isPartOf: { "@id": ID.website },
       about: { "@id": ID.game },
       primaryImageOfPage: { "@id": ID.image },
+      ...(path === "/"
+        ? {}
+        : { breadcrumb: { "@id": `${url}#breadcrumb` } }),
     },
     {
       "@type": "VideoGame",
       "@id": ID.game,
-      name: `${BRAND.name} ${BRAND.suffix}`,
-      alternateName: BRAND.name,
+      name: SITE.name,
+      alternateName: SITE.shortName,
       description: SITE.description,
       url: `${ORIGIN}/`,
       image: { "@id": ID.image },
@@ -208,6 +246,22 @@ export function buildStructuredData(): Record<string, unknown> {
     })),
   ];
 
+  if (path !== "/") {
+    graph.push({
+      "@type": "BreadcrumbList",
+      "@id": `${url}#breadcrumb`,
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: PAGES["/"].name,
+          item: `${ORIGIN}/`,
+        },
+        { "@type": "ListItem", position: 2, name: page.name },
+      ],
+    });
+  }
+
   if (SITE.trailer) {
     graph.push({
       "@type": "VideoObject",
@@ -232,13 +286,15 @@ export type HeadTag = {
   injectTo?: "head" | "head-prepend";
 };
 
-export function buildHeadTags(): HeadTag[] {
+export function buildHeadTags(path = "/"): HeadTag[] {
   const ogImage = abs(SITE.ogImage);
+  const page = pageMeta(path);
+  const url = canonical(path);
 
   const tags: HeadTag[] = [
-    { tag: "title", children: SITE.title },
-    { tag: "meta", attrs: { name: "description", content: SITE.description } },
-    { tag: "link", attrs: { rel: "canonical", href: `${ORIGIN}/` } },
+    { tag: "title", children: page.title },
+    { tag: "meta", attrs: { name: "description", content: page.description } },
+    { tag: "link", attrs: { rel: "canonical", href: url } },
 
     {
       tag: "meta",
@@ -256,11 +312,11 @@ export function buildHeadTags(): HeadTag[] {
 
     { tag: "meta", attrs: { property: "og:type", content: "website" } },
     { tag: "meta", attrs: { property: "og:site_name", content: SITE.name } },
-    { tag: "meta", attrs: { property: "og:url", content: `${ORIGIN}/` } },
-    { tag: "meta", attrs: { property: "og:title", content: SITE.title } },
+    { tag: "meta", attrs: { property: "og:url", content: url } },
+    { tag: "meta", attrs: { property: "og:title", content: page.title } },
     {
       tag: "meta",
-      attrs: { property: "og:description", content: SITE.description },
+      attrs: { property: "og:description", content: page.description },
     },
     { tag: "meta", attrs: { property: "og:locale", content: SITE.locale } },
     { tag: "meta", attrs: { property: "og:image", content: ogImage } },
@@ -292,10 +348,10 @@ export function buildHeadTags(): HeadTag[] {
       tag: "meta",
       attrs: { name: "twitter:card", content: "summary_large_image" },
     },
-    { tag: "meta", attrs: { name: "twitter:title", content: SITE.title } },
+    { tag: "meta", attrs: { name: "twitter:title", content: page.title } },
     {
       tag: "meta",
-      attrs: { name: "twitter:description", content: SITE.description },
+      attrs: { name: "twitter:description", content: page.description },
     },
     { tag: "meta", attrs: { name: "twitter:image", content: ogImage } },
     {
@@ -312,7 +368,7 @@ export function buildHeadTags(): HeadTag[] {
     {
       tag: "script",
       attrs: { type: "application/ld+json" },
-      children: JSON.stringify(buildStructuredData()),
+      children: JSON.stringify(buildStructuredData(path)),
     },
   ];
 
@@ -476,6 +532,7 @@ export function buildLlmsTxt(): string {
   push(
     `- [Compatibility](${ORIGIN}/#compatibility): minimum, recommended and network requirements.`,
   );
+  push(`- [Rankings](${canonical("/ranking")}): ${PAGES["/ranking"].description}`);
   for (const href of SAME_AS) push(`- [Community](${href})`);
   push("");
 

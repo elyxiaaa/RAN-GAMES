@@ -1,0 +1,12 @@
+# Cloudflare redirects. Copied to the site root by the build.
+# https://developers.cloudflare.com/pages/configuration/redirects/
+#
+# Cloudflare already handles the two redirects Apache needed rules for:
+#   - HTTP to HTTPS, on every request
+#   - /ranking.html to /ranking, because an .html file is served extension-less
+#
+# It cannot do www to apex here: _redirects matches paths only, never hostnames.
+# That one is a Redirect Rule in the dashboard, see README.
+
+# Belt and braces for anyone who links the page with a trailing slash.
+/ranking/ /ranking 301

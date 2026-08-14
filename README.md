@@ -1,6 +1,6 @@
-# Ran Online Official
+# Ran Online E-games
 
-Landing page for the Ran Online Official Windows PC client. React 19 + Vite +
+Landing page for the Ran Online E-games Windows PC client. React 19 + Vite +
 Tailwind v3 + Motion.
 
 The game is a desktop title. Every spec figure, performance band and download
@@ -243,6 +243,19 @@ each group's `id` selects its icon in
 [Compatibility.tsx](src/components/Compatibility.tsx) — rename one and you must
 rename the matching key there.
 
+### 4b. Ranking data
+
+[src/data/ranking.ts](src/data/ranking.ts) fills all four boards with
+`Dummy{n}` handles and `DummyGuild{n}` names. Rows are generated from a fixed
+seed rather than `Math.random`, so the prerendered HTML and the hydrated markup
+agree; keep it that way or hydration will warn.
+
+Going live means replacing the four `build*` helpers with a fetch and leaving
+`LeagueRow`, `GoldRow`, `GuildRow` and `PkRow` alone — the table and podium read
+those types, nothing else. The endpoints the shapes assume are listed at the top
+of the file. `RANKING_META.synced` is a static string for the same hydration
+reason, so swap it for a real timestamp only once the data arrives client side.
+
 ### 5. Live player counts
 
 [useLiveCount](src/hooks/useLiveCount.ts) counts up on mount, then simulates
@@ -250,6 +263,26 @@ drift on a 4.2s interval. The value is written straight to `textContent`
 through a motion value, so React never re-renders per frame. To wire real data,
 poll your status endpoint and call `animate(value, next)` with the response
 instead of the random walk.
+
+## Pages
+
+Two routes, two HTML entries, no client router. [src/routes.ts](src/routes.ts)
+maps a pathname to a page, [App.tsx](src/App.tsx) picks the page, and links
+between them are plain anchors so each one is served as a prerendered document.
+
+| Route | Entry HTML | Page |
+| --- | --- | --- |
+| `/` | [index.html](index.html) | [HomePage.tsx](src/pages/HomePage.tsx) |
+| `/ranking` | [ranking.html](ranking.html) | [RankingPage.tsx](src/pages/RankingPage.tsx) |
+
+Shared chrome takes a `route` prop: `Nav` and `Footer` prefix their hash links
+with `/` when read from anywhere but home, and the nav bar stops hiding at scroll
+top on pages that have no hero to reveal.
+
+Adding a third route means four edits: a flat `<name>.html` at the repo root, an input in
+[vite.config.ts](vite.config.ts), an entry in `ROUTES` in
+[scripts/prerender.mjs](scripts/prerender.mjs), and one in `PAGES` plus
+`SEO_ROUTES` in [src/data/seo.ts](src/data/seo.ts).
 
 ## Section map
 
@@ -267,6 +300,32 @@ Each section uses a different layout family, so the page never repeats itself.
 | Compatibility | `#compatibility` | Tier ladder plus grouped spec columns |
 | Download | `#download` | Centred full bleed launch moment |
 | Footer | | Link columns |
+
+The ranking page reuses the same families in a different order:
+
+| Section | id | Layout |
+| --- | --- | --- |
+| Header | `#top` | Duotone plate, breadcrumb, headline plus stat rail |
+| Board | `#board` | Sticky tab strip, class rail, podium, data table |
+| Notes | `#how-it-works` | Definition pairs plus a support card |
+
+The board's view lives in the query string, not in component state, so a row can
+be linked to and a refresh lands back on the same table:
+
+```
+/ranking?board=pk&class=archer&page=3&q=dummy1
+```
+
+[useBoardState.ts](src/components/ranking/useBoardState.ts) reads it through
+`useSyncExternalStore` with an empty server snapshot, which is what keeps the
+prerendered default view from fighting hydration. Unknown or out-of-range values
+fall back to the default rather than erroring, so a mangled link still renders.
+
+Secondary table columns fold into the name cell below `lg`
+([RankingTable.tsx](src/components/ranking/RankingTable.tsx)): each column
+carries the breakpoint it appears at, and the matching folded chip carries the
+breakpoint it disappears at, so the two can't drift apart. That is why the guild
+board shows ten columns on a desktop and no horizontal scroll on a phone.
 
 ## SEO
 
@@ -298,7 +357,7 @@ is missing from `public/`.
 
 ### Prerendering
 
-The page is a client-rendered SPA, which means the served HTML is an empty
+The pages are client rendered, which means the served HTML would be an empty
 `<div id="root">`. Googlebot runs JavaScript and would still index it, but
 GPTBot, ClaudeBot, PerplexityBot and OAI-SearchBot do not — to every AI search
 surface the site would be a blank page.
@@ -312,10 +371,50 @@ vite build --ssr src/entry-server.tsx --outDir …    # server → dist-ssr/
 node scripts/prerender.mjs                          # inject, then delete dist-ssr/
 ```
 
-[scripts/prerender.mjs](scripts/prerender.mjs) refuses to write a result under
-500 characters, so a broken render fails the build instead of silently shipping
-a stub. `dist/index.html` carries about 65 kB of markup and 5.2 kB of readable
-text. Use `npm run build:client` to skip the prerender while debugging.
+[scripts/prerender.mjs](scripts/prerender.mjs) walks every route, rendering each
+into its own HTML file, and refuses to write a result under 500 characters, so a
+broken render fails the build instead of silently shipping a stub.
+`dist/index.html` carries about 65 kB of markup and `dist/ranking.html` about
+74 kB. Use `npm run build:client` to skip the prerender while debugging.
+
+## Deploying to Cloudflare
+
+| Setting | Value |
+| --- | --- |
+| Build command | `npm run build` |
+| Output directory | `dist` |
+| Node version | pinned to 22.16.0 by [.node-version](.node-version) |
+
+The Node pin matters: `vite.config.ts` and `scripts/prerender.mjs` both use
+`import.meta.dirname`, which needs Node 20.11 or newer. Cloudflare's current
+build image already defaults to 22, but an older project can still be on the
+image that ships Node 18, where the build would fail at config load.
+
+**Page entries are flat files, not folders.** Cloudflare serves `ranking.html`
+at the extension-less `/ranking`, and would only serve a `ranking/index.html` at
+`/ranking/`, with a 308 from the URL without the slash. Since `/ranking` is the
+canonical URL everywhere in [seo.ts](src/data/seo.ts), the sitemap and every
+internal link, a flat file is what keeps all of them free of a redirect hop. Any
+new route follows the same rule: `about.html`, never `about/index.html`. The dev
+server has no such convention, so a middleware in
+[vite-plugin-seo.ts](plugins/vite-plugin-seo.ts) maps `/ranking` onto the file
+and both environments answer the same URL.
+
+[public/_headers](public/_headers) and [public/_redirects](public/_redirects)
+are copied to the site root by the build and read by Cloudflare. They replace
+what `.htaccess` used to do, minus three rules that are no longer needed:
+compression and MIME types are automatic, and HTTP upgrades to HTTPS on its own.
+
+**One redirect cannot live in the repo.** `_redirects` matches paths, never
+hostnames, so www to apex has to be a Redirect Rule in the dashboard: Rules →
+Redirect Rules → Create, matching `hostname eq "www.ranonline-egames.com"`, with
+a dynamic target of `concat("https://ranonline-egames.com", http.request.uri)`
+and status 301. Without it, the site answers on both hostnames and splits its
+own ranking signals. Also switch on SSL/TLS → Edge Certificates → Always Use
+HTTPS.
+
+Unknown paths get Cloudflare's default 404. Adding `public/404.html` would
+replace it with a branded page; nothing else in the build needs to change.
 
 Nothing in the tree touches the DOM during render — every `window` and
 `document` access already sits inside a `useEffect` — which is what makes this
@@ -357,6 +456,7 @@ one deploy setting:
 | --- | --- |
 | Domain, title, description, share card, schema | [src/data/seo.ts](src/data/seo.ts) |
 | Brand, links, realms, rates, specs, copy | [src/data/content.ts](src/data/content.ts) |
+| Ranking rows, until the API is wired | [src/data/ranking.ts](src/data/ranking.ts) |
 | Colour tokens, if the new server is not crimson | [tailwind.config.js](tailwind.config.js) |
 | Art, video, logo, favicon | `public/` and `src/assets/` |
 | Package name | [package.json](package.json) |

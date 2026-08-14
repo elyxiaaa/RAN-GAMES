@@ -2,12 +2,28 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Plugin } from "vite";
 import {
+  SEO_ROUTES,
   SITE,
   buildHeadTags,
   buildLlmsTxt,
   buildRobotsTxt,
   buildSitemap,
 } from "../src/data/seo.ts";
+
+/**
+ * Turns the HTML file being transformed into the route it serves, so each entry
+ * gets its own title, canonical and structured data.
+ *   /index.html   -> /
+ *   /ranking.html -> /ranking
+ *   /ranking      -> /ranking   (dev server request)
+ */
+function routeOf(htmlPath: string): string {
+  const route = htmlPath
+    .replace(/\?.*$/, "")
+    .replace(/(index)?\.html$/, "")
+    .replace(/\/+$/, "");
+  return route || "/";
+}
 
 const GENERATED: Record<string, { type: string; build: () => string }> = {
   "robots.txt": { type: "text/plain; charset=utf-8", build: buildRobotsTxt },
@@ -48,9 +64,9 @@ export function seo(): Plugin {
 
     transformIndexHtml: {
       order: "pre",
-      handler: (html) => ({
+      handler: (html, ctx) => ({
         html: html.replace(/(<html[^>]*\slang=")[^"]*(")/i, `$1${SITE.lang}$2`),
-        tags: buildHeadTags().map((tag) => ({
+        tags: buildHeadTags(routeOf(ctx.path)).map((tag) => ({
           ...tag,
           injectTo: tag.injectTo ?? ("head" as const),
         })),
@@ -58,6 +74,21 @@ export function seo(): Plugin {
     },
 
     configureServer(server) {
+      // Cloudflare serves ranking.html at the extension-less /ranking. The dev
+      // server has no such rule, so map the bare path onto the file here and
+      // keep both environments answering the same URL.
+      const pages = SEO_ROUTES.map((route) => route.path).filter(
+        (path) => path !== "/",
+      );
+
+      server.middlewares.use((req, _res, next) => {
+        const [path, search = ""] = (req.url ?? "").split("?");
+        if (pages.includes(path)) {
+          req.url = `${path}.html${search ? `?${search}` : ""}`;
+        }
+        next();
+      });
+
       server.middlewares.use((req, res, next) => {
         const name = (req.url ?? "").split("?")[0].replace(/^\//, "");
         const file = GENERATED[name];

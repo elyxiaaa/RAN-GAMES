@@ -4,11 +4,12 @@ import "@fontsource-variable/oswald";
 import "@fontsource-variable/ibm-plex-sans";
 import "./index.css";
 import App from "./App.tsx";
+import { routeFromPath } from "./routes.ts";
 
 const container = document.getElementById("root")!;
 const app = (
   <StrictMode>
-    <App />
+    <App route={routeFromPath(window.location.pathname)} />
   </StrictMode>
 );
 

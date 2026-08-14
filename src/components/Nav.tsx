@@ -10,10 +10,20 @@ import {
 import { LINKS } from "../data/content";
 import { useActiveSection } from "../hooks/useActiveSection";
 import { useScrolled } from "../hooks/useScrolled";
+import { ROUTE_PATH, anchorBase, type Route } from "../routes";
 import { Button } from "./ui/Button";
 import { Logo } from "./ui/Logo";
 
-const NAV_ITEMS = [
+type NavItem = {
+  href: string;
+  label: string;
+  /** Home page sections this item spies on. Empty for links to another route. */
+  sections: string[];
+  /** Set when the item leads to a whole page rather than an anchor. */
+  route?: Route;
+};
+
+const NAV_ITEMS: NavItem[] = [
   { href: "#footage", label: "Footage", sections: ["footage"] },
   {
     href: "#servers",
@@ -22,18 +32,36 @@ const NAV_ITEMS = [
   },
   { href: "#features", label: "Features", sections: ["features"] },
   { href: "#compatibility", label: "Compatibility", sections: ["compatibility"] },
+  {
+    href: ROUTE_PATH.ranking,
+    label: "Ranking",
+    sections: [],
+    route: "ranking",
+  },
 ];
 
 const SPY_IDS = NAV_ITEMS.flatMap((item) => item.sections);
 
-export function Nav() {
+export function Nav({ route = "home" }: { route?: Route }) {
   const [open, setOpen] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
   const reduce = useReducedMotion();
   const activeSection = useActiveSection(SPY_IDS);
   const scrolled = useScrolled();
 
-  const visible = scrolled || open || focusWithin;
+  const base = anchorBase(route);
+  /** Section spying only means something on the page that owns those sections. */
+  const onHome = route === "home";
+  const visible = !onHome || scrolled || open || focusWithin;
+
+  /** Hash items point back at the home page when read from another route. */
+  const hrefOf = (item: NavItem) =>
+    item.route ? item.href : `${base}${item.href}`;
+
+  const isCurrent = (item: NavItem) =>
+    item.route
+      ? item.route === route
+      : onHome && item.sections.includes(activeSection ?? "");
 
   useEffect(() => {
     if (!open) return;
@@ -64,11 +92,13 @@ export function Nav() {
         visible ? "translate-y-0" : "-translate-y-full"
       }`}
     >
-      <div className="mx-auto flex h-[68px] max-w-shell items-center justify-between gap-6 px-4 sm:px-6 lg:px-10">
+      <div className="mx-auto flex h-[var(--nav-h)] max-w-shell items-center justify-between gap-6 px-4 sm:px-6 lg:px-10">
         <a
-          href="#top"
+          href={onHome ? "#top" : "/"}
           className="shrink-0 py-1 transition-opacity hover:opacity-80"
-          aria-label="Ran Online Official, back to top"
+          aria-label={
+            onHome ? "Ran Online E-games, back to top" : "Ran Online E-games, home"
+          }
         >
           <Logo />
         </a>
@@ -76,13 +106,15 @@ export function Nav() {
         <nav aria-label="Primary" className="hidden lg:block">
           <ul className="flex items-center gap-1">
             {NAV_ITEMS.map((item) => {
-              const current = item.sections.includes(activeSection ?? "");
+              const current = isCurrent(item);
 
               return (
                 <li key={item.href}>
                   <a
-                    href={item.href}
-                    aria-current={current ? "location" : undefined}
+                    href={hrefOf(item)}
+                    aria-current={
+                      current ? (item.route ? "page" : "location") : undefined
+                    }
                     className={`label group relative block px-4 py-2.5 text-[11px] transition-colors ${
                       current ? "text-blush" : "text-rose hover:text-blush"
                     }`}
@@ -105,7 +137,7 @@ export function Nav() {
           <div className="hidden items-center gap-1 sm:flex">
             <SocialIcon
               href={LINKS.facebook}
-              label="Ran Online Official on Facebook"
+              label="Ran Online E-games on Facebook"
             >
               <FacebookLogo size={18} weight="fill" />
             </SocialIcon>
@@ -116,7 +148,7 @@ export function Nav() {
 
           <Button
             as="a"
-            href="#download"
+            href={`${base}#download`}
             size="md"
             icon={<DownloadSimple size={17} weight="bold" />}
             className="hidden sm:inline-flex"
@@ -145,12 +177,12 @@ export function Nav() {
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -12 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-x-0 top-[68px] max-h-[calc(100dvh-68px)] overflow-y-auto border-b border-burgundy-900 bg-ink/95 backdrop-blur-md lg:hidden"
+            className="absolute inset-x-0 top-[var(--nav-h)] max-h-[calc(100dvh-var(--nav-h))] overflow-y-auto border-b border-burgundy-900 bg-ink/95 backdrop-blur-md lg:hidden"
           >
             <nav aria-label="Mobile" className="px-4 py-5 sm:px-6">
               <ul className="flex flex-col">
                 {NAV_ITEMS.map((item) => {
-                  const current = item.sections.includes(activeSection ?? "");
+                  const current = isCurrent(item);
 
                   return (
                     <li
@@ -158,9 +190,11 @@ export function Nav() {
                       className="border-b border-burgundy-900/80"
                     >
                       <a
-                        href={item.href}
+                        href={hrefOf(item)}
                         onClick={() => setOpen(false)}
-                        aria-current={current ? "location" : undefined}
+                        aria-current={
+                          current ? (item.route ? "page" : "location") : undefined
+                        }
                         className={`display block border-l-2 py-4 pl-4 text-[26px] transition-colors ${
                           current
                             ? "border-crimson text-crimson-hot"
@@ -177,7 +211,7 @@ export function Nav() {
               <div className="mt-6 flex flex-col gap-3">
                 <Button
                   as="a"
-                  href="#download"
+                  href={`${base}#download`}
                   size="lg"
                   onClick={() => setOpen(false)}
                   icon={<DownloadSimple size={18} weight="bold" />}

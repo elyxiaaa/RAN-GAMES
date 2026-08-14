@@ -5,11 +5,15 @@
 @layer base {
   :root {
     color-scheme: dark;
+
+    /* Height of the fixed header. Anchor offsets, sticky sub-navigation and the
+       top padding of any page without a hero all measure from this. */
+    --nav-h: 68px;
   }
 
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 76px;
+    scroll-padding-top: calc(var(--nav-h) + 8px);
   }
 
   body {

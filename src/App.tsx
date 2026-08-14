@@ -1,17 +1,14 @@
-import { Compatibility } from "./components/Compatibility";
-import { DownloadCta } from "./components/DownloadCta";
 import { Footer } from "./components/Footer";
-import { GameFeatures } from "./components/GameFeatures";
 import { Grain } from "./components/Grain";
-import { Hero } from "./components/Hero";
 import { Nav } from "./components/Nav";
-import { ServerFeatures } from "./components/ServerFeatures";
-import { ServerInfo } from "./components/ServerInfo";
-import { Trailer } from "./components/Trailer";
+import { HomePage } from "./pages/HomePage";
+import { RankingPage } from "./pages/RankingPage";
+import { type Route } from "./routes";
 
-export default function App() {
+export default function App({ route = "home" }: { route?: Route }) {
   return (
     <>
+      {/* Both pages open with an `id="top"` section, so this stays a local jump. */}
       <a
         href="#top"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:border focus:border-crimson focus:bg-ink focus:px-4 focus:py-2 focus:text-blush"
@@ -20,19 +17,11 @@ export default function App() {
       </a>
 
       <Grain />
-      <Nav />
+      <Nav route={route} />
 
-      <main>
-        <Hero />
-        <Trailer />
-        <ServerInfo />
-        <ServerFeatures />
-        <GameFeatures />
-        <Compatibility />
-        <DownloadCta />
-      </main>
+      <main>{route === "ranking" ? <RankingPage /> : <HomePage />}</main>
 
-      <Footer />
+      <Footer route={route} />
     </>
   );
 }

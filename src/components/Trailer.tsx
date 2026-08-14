@@ -31,7 +31,7 @@ export function Trailer() {
             {playing && videoId ? (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`}
-                title="Ran Online Episode 3 official trailer"
+                title="Ran Online E-games Episode 3 trailer"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 className="absolute inset-0 h-full w-full"
@@ -55,11 +55,11 @@ export function Trailer() {
                     type="button"
                     onClick={() => setPlaying(true)}
                     className="group absolute inset-0 flex flex-col items-center justify-center gap-5"
-                    aria-label="Play the Episode 3 official trailer"
+                    aria-label="Play the Episode 3 trailer"
                   >
                     <PlayMark />
                     <span className="label text-[11px] text-blush">
-                      Official Episode 3 trailer
+                      Episode 3 trailer
                     </span>
                   </button>
                 ) : (
@@ -68,11 +68,11 @@ export function Trailer() {
                     target="_blank"
                     rel="noreferrer"
                     className="group absolute inset-0 flex flex-col items-center justify-center gap-5"
-                    aria-label="Open the Episode 3 official trailer"
+                    aria-label="Open the Episode 3 trailer"
                   >
                     <PlayMark />
                     <span className="label text-[11px] text-blush">
-                      Official Episode 3 trailer
+                      Episode 3 trailer
                     </span>
                   </a>
                 )}

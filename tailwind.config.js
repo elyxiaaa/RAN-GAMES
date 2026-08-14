@@ -1,5 +1,5 @@
 export default {
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  content: ["./index.html", "./ranking.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -24,6 +24,7 @@ export default {
         },
         rose: "#A89898",
         blush: "#FFE2E2",
+        win: "#49C97C",
       },
       fontFamily: {
         display: ['"Oswald Variable"', "Oswald", '"Arial Narrow"', "sans-serif"],
@@ -80,6 +81,10 @@ export default {
           "70%": { opacity: "1" },
           "100%": { transform: "translateY(340%)", opacity: "0" },
         },
+        "row-in": {
+          from: { opacity: "0", transform: "translateY(7px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
         "storm-flash": {
           "0%, 90%, 100%": { opacity: "0" },
           "91%": { opacity: "0.16" },
@@ -95,6 +100,7 @@ export default {
         "ember-rise": "ember-rise linear infinite",
         "scroll-hint": "scroll-hint 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite",
         "storm-flash": "storm-flash 11s ease-out infinite",
+        "row-in": "row-in 0.44s cubic-bezier(0.16, 1, 0.3, 1) both",
       },
     },
   },

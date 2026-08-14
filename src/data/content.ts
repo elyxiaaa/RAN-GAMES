@@ -1,6 +1,6 @@
 export const BRAND = {
   name: "RAN ONLINE",
-  suffix: "OFFICIAL",
+  suffix: "E-GAMES",
   episode: "EPISODE 3",
   logoSrc: "/images/main-logo.webp" as string | null,
 };
@@ -30,7 +30,7 @@ export const HERO_ART = {
 
 export const HERO_MARK = {
   cycle: ["RAN ONLINE", "EPISODE 3"],
-  spoken: "Ran Online Official. Episode 3 is live.",
+  spoken: "Ran Online E-games. Episode 3 is live.",
 };
 
 export const HERO_COPY = {
