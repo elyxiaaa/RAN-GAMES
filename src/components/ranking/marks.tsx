@@ -2,12 +2,13 @@ import { Crown, ShieldChevron } from "@phosphor-icons/react";
 import {
   CLASSES,
   SCHOOLS,
+  classIconSrc,
   formatInt,
   type ClassId,
+  type Gender,
   type GuildTier,
   type SchoolId,
 } from "../../data/ranking";
-import { CLASS_ICON } from "./icons";
 
 /** Rank number. The first three seats carry the crimson, everything else reads quiet. */
 export function RankMark({ rank }: { rank: number }) {
@@ -34,14 +35,44 @@ export function RankMark({ rank }: { rank: number }) {
   );
 }
 
-export function ClassMark({ classId }: { classId: ClassId }) {
+/**
+ * The game's own class portrait, one per class and body. Decorative: every
+ * place it appears sits next to the class name in text.
+ */
+export function ClassIcon({
+  classId,
+  gender,
+  size = 20,
+}: {
+  classId: ClassId;
+  gender: Gender;
+  size?: number;
+}) {
   return (
-    <span
-      className="inline-flex items-center gap-2 text-rose transition-colors group-hover:text-blush"
-    >
-      <span aria-hidden="true" className="shrink-0">
-        {CLASS_ICON[classId]}
-      </span>
+    <img
+      src={classIconSrc(classId, gender)}
+      alt=""
+      aria-hidden="true"
+      width={size}
+      height={size}
+      loading="lazy"
+      decoding="async"
+      className="block shrink-0 object-contain"
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+export function ClassMark({
+  classId,
+  gender,
+}: {
+  classId: ClassId;
+  gender: Gender;
+}) {
+  return (
+    <span className="inline-flex items-center gap-2 text-rose transition-colors group-hover:text-blush">
+      <ClassIcon classId={classId} gender={gender} />
       <span className="label whitespace-nowrap text-[10px]">
         {CLASSES[classId].label}
       </span>

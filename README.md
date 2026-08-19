@@ -429,10 +429,12 @@ HTTPS.
 Unknown paths get Cloudflare's default 404. Adding `public/404.html` would
 replace it with a branded page; nothing else in the build needs to change.
 
-## Live server stats
+## Live game server data
 
-The hero readout shows total characters created, overall and per school, read
-from the game server rather than from a data file.
+Two surfaces are live from the game server rather than from a data file: the
+hero readout (total characters, overall and per school) and the league
+standings board on /ranking. Top Gold, Top Guild and PK Map are still
+generated placeholders in [src/data/ranking.ts](src/data/ranking.ts).
 
 **The game server speaks plain HTTP only.** A page served over HTTPS cannot call
 an `http://` endpoint at all: the browser blocks it as mixed content, before any
@@ -442,8 +444,16 @@ browser never calls the game server. It calls this site's own origin at
 
 | Environment | Answered by |
 | --- | --- |
-| Cloudflare Pages | [functions/api/stats.ts](functions/api/stats.ts), over [server/proxy.ts](server/proxy.ts) |
-| `npm run dev`, `npm run preview` | the `/api/stats` proxy in [vite.config.ts](vite.config.ts) |
+| Cloudflare Pages | the Functions under [functions/api/](functions/api/), over [server/proxy.ts](server/proxy.ts) |
+| `npm run dev`, `npm run preview` | the dev proxy in [vite.config.ts](vite.config.ts) |
+
+Both build their requests from one table, [server/routes.ts](server/routes.ts),
+so what is pinned, forwarded and refused cannot drift between them:
+
+| Endpoint | Caller may set | Pinned by us | Edge TTL |
+| --- | --- | --- | --- |
+| `/api/stats` | nothing | — | 30s |
+| `/api/ranking/league` | `category` (`all, resu, br, sw, ar, sh, heal`) | `page=1`, `pageSize=50` | 300s |
 
 The Vite proxy is a stand-in for local work only. It forwards straight
 upstream and does no caching, so `x-cache` never appears there. To exercise the
@@ -455,7 +465,7 @@ never reaches the client bundle:
 
 | Variable | Meaning |
 | --- | --- |
-| `STATS_API_URL` | Upstream endpoint, default `http://egames.ran-services.com/api/stats` |
+| `GAME_API_ORIGIN` | Origin only, default `http://egames.ran-services.com`. Paths live in server/routes.ts |
 | `STATS_API_TOKEN` | Appended as the `apiToken` query parameter |
 
 Locally they live in `.env.local`, which is gitignored; copy
@@ -496,10 +506,30 @@ stop someone deliberately hammering the endpoint across datacenters. That is a
 Rate Limiting rule in the dashboard, matching `path contains "/api/"`, which also
 covers anything added under `/api/` later.
 
+### The league board
+
+The game server caps `pageSize` at 50 and never reports a total above it, so
+one request is the entire board. That is why `page` is pinned and the search
+term is never sent: [RankingBoard](src/components/ranking/RankingBoard.tsx)
+pages and searches the 50 rows locally, which keeps the cache down to one
+entry per category instead of one per category, page and search string.
+
+Class and body come from `classLabel` (`"Archer [F]"`), never from the numeric
+`chaClass`. The live board returns 1, 2, 4, 8, 64 and 256 for six
+combinations, which is not one consistent bit pattern, so the number cannot
+be decoded without guessing. Icons resolve to
+`public/images/class-icons/{br,sm,ar,sh}_{m,w}.webp`.
+
+Guild names arrive padded to a fixed database width and are trimmed on parse.
+A row missing a name, rank, school or readable class is dropped rather than
+rendered with a placeholder standing in for real data.
+
 Nothing fetches during the prerender. The shipped HTML carries the `SNAPSHOT`
 figures in [src/data/stats.ts](src/data/stats.ts), and
 [useServerStats](src/hooks/useServerStats.ts) replaces them after mount, then
-once a minute while the tab is visible. A failed poll is silent by design: the
+once a minute while the tab is visible. The league board has no snapshot at
+all and prerenders as a skeleton, on purpose: a generated stand-in would put
+invented player names into the HTML that crawlers read. A failed poll is silent by design: the
 readout keeps the numbers already on screen, so an outage upstream costs freshness
 and never shows a broken hero. Refresh `SNAPSHOT` if it ever drifts far enough
 from reality to read as wrong to a crawler.
@@ -545,7 +575,7 @@ one deploy setting:
 | Domain, title, description, share card, schema | [src/data/seo.ts](src/data/seo.ts) |
 | Brand, links, realms, rates, specs, copy | [src/data/content.ts](src/data/content.ts) |
 | Ranking rows, until the API is wired | [src/data/ranking.ts](src/data/ranking.ts) |
-| Stats snapshot and upstream, per server | [src/data/stats.ts](src/data/stats.ts), `STATS_API_URL` |
+| Stats snapshot, and the API origin | [src/data/stats.ts](src/data/stats.ts), `GAME_API_ORIGIN` |
 | Colour tokens, if the new server is not crimson | [tailwind.config.js](tailwind.config.js) |
 | Art, video, logo, favicon | `public/` and `src/assets/` |
 | Package name | [package.json](package.json) |

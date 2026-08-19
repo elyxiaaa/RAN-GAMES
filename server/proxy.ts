@@ -5,7 +5,7 @@
  * router, every file in it becomes a public route, and there is no documented
  * opt-out. A helper placed there could quietly ship as an endpoint of its own.
  *
- * It exists to solve two problems the browser cannot:
+ * It exists to solve three problems the browser cannot:
  *
  *   Scheme. The game server answers on plain HTTP only, and a page served over
  *   HTTPS is not allowed to call it -- the browser blocks mixed content before
@@ -14,9 +14,15 @@
  *
  *   Load. Cloudflare does not cache a response a Function builds itself, so
  *   without the Cache API use below, every visitor's poll would land on the
- *   game database. The cache collapses all of them into one upstream call per
- *   TTL per datacenter.
+ *   game database. The cache collapses them into one upstream call per TTL per
+ *   datacenter.
+ *
+ *   Surface. The caller may set only the parameters named in the route's
+ *   `forward` map, and only to the values listed there. Everything else is
+ *   refused here, before a request is made or a cache entry is opened.
  */
+
+import type { Route } from "./routes.ts";
 
 /** Long enough for a cold game server, short enough not to hold the edge open. */
 const TIMEOUT_MS = 6000;
@@ -24,20 +30,12 @@ const TIMEOUT_MS = 6000;
 /** A failure must never be cached, or one bad minute outlives the outage. */
 const CACHE_FAIL = "no-store";
 
-export type ProxyConfig = {
-  /** Upstream endpoint, absolute. Any query string it carries is kept. */
-  upstream: string;
+export type ProxyOptions = {
+  route: Route;
+  /** Origin of the game server. */
+  origin: string;
   /** Appended as `apiToken`. Never reaches the cache key or the client. */
   token?: string;
-  /** Seconds an answer stays fresh at the edge. */
-  ttl: number;
-  /**
-   * Query parameters copied from the caller onto both the upstream request and
-   * the cache key. An allowlist, not a passthrough: anything unnamed is
-   * dropped, so a caller can neither steer the upstream request nor split the
-   * cache into unlimited entries by inventing parameters.
-   */
-  forward?: readonly string[];
 };
 
 /** The slice of a Pages Function context this needs. */
@@ -68,25 +66,35 @@ function tag(response: Response, state: "HIT" | "MISS"): Response {
 
 export async function proxyJson(
   context: ProxyContext,
-  config: ProxyConfig,
+  options: ProxyOptions,
 ): Promise<Response> {
+  const { route } = options;
   const incoming = new URL(context.request.url);
-  const upstream = new URL(config.upstream);
+  const upstream = new URL(route.path, options.origin);
 
-  // The cache key is this site's own path plus the forwarded parameters, built
+  // The cache key is this site's own path plus the accepted parameters, built
   // in the fixed order of `forward` so it is deterministic. Never the upstream
-  // URL: that one carries the token, which must not end up in a cache key.
-  const key = new URL(incoming.pathname, incoming.origin);
+  // URL: that one carries the token, and a token in a cache key is a token in
+  // shared storage.
+  const key = new URL(route.path, incoming.origin);
 
-  for (const name of config.forward ?? []) {
+  for (const [name, allowed] of Object.entries(route.forward)) {
     const value = incoming.searchParams.get(name);
     if (value === null) continue;
+
+    if (!allowed.includes(value)) {
+      return fail(400, `Unsupported ${name}.`);
+    }
 
     key.searchParams.set(name, value);
     upstream.searchParams.set(name, value);
   }
 
-  if (config.token) upstream.searchParams.set("apiToken", config.token);
+  for (const [name, value] of Object.entries(route.pinned)) {
+    upstream.searchParams.set(name, value);
+  }
+
+  if (options.token) upstream.searchParams.set("apiToken", options.token);
 
   const cache = caches.default;
   const cacheKey = new Request(key.toString(), { method: "GET" });
@@ -115,7 +123,7 @@ export async function proxyJson(
     status: 200,
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": `public, max-age=${config.ttl}, s-maxage=${config.ttl}`,
+      "cache-control": `public, max-age=${route.ttl}, s-maxage=${route.ttl}`,
     },
   });
 

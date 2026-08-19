@@ -14,8 +14,7 @@ import {
   type PkRow,
   type SchoolId,
 } from "../../data/ranking";
-import { CLASS_ICON } from "./icons";
-import { GuildTag, SchoolCrest } from "./marks";
+import { ClassIcon, GuildTag, SchoolCrest } from "./marks";
 
 type Seat = {
   rank: number;
@@ -72,7 +71,7 @@ function seatOf(row: BoardRow, board: BoardId): Seat {
     rank: player.rank,
     name: player.name,
     detail: CLASSES[player.classId].label,
-    detailIcon: CLASS_ICON[player.classId],
+    detailIcon: <ClassIcon classId={player.classId} gender={player.gender} />,
     levelLabel: `Lv ${player.level}`,
     school: player.school,
   };

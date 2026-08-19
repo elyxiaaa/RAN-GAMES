@@ -18,5 +18,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "plugins", "scripts"]
+  "include": ["vite.config.ts", "plugins", "scripts", "server/routes.ts"]
 }

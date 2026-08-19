@@ -1,17 +1,18 @@
 /**
  * Ranking boards.
  *
- * The rows below are placeholder data shaped exactly like the payload the game
- * server will return, so going live means replacing the four `build*` helpers
- * with a fetch and keeping the row types untouched.
+ * The league board is live: src/data/league.ts fetches it through /api/ranking
+ * /league. The other three are still placeholder data, shaped exactly like the
+ * payload the game server will return, so wiring each one means replacing its
+ * `build*` helper with a fetch and leaving the row types untouched.
  *
- *   GET /api/ranking/league?class=all&page=1  -> LeagueRow[]
- *   GET /api/ranking/gold?page=1              -> GoldRow[]
- *   GET /api/ranking/guild?page=1             -> GuildRow[]
- *   GET /api/ranking/pk?class=all&page=1      -> PkRow[]
+ *   GET /api/ranking/league?category=all  -> LeagueRow[]   (live)
+ *   GET /api/ranking/gold?page=1          -> GoldRow[]
+ *   GET /api/ranking/guild?page=1         -> GuildRow[]
+ *   GET /api/ranking/pk?class=all&page=1  -> PkRow[]
  *
- * Every value is generated from a fixed seed, never from `Math.random` or
- * `Date.now`, so the prerendered markup and the hydrated markup agree.
+ * Every placeholder value is generated from a fixed seed, never from
+ * `Math.random` or `Date.now`, so prerendered and hydrated markup agree.
  */
 
 import { SERVER_STATS } from "./content.ts";
@@ -29,6 +30,12 @@ export const CAP_LEVEL =
 export type BoardId = "league" | "gold" | "guild" | "pk";
 
 export type ClassId = "brawler" | "swordsman" | "archer" | "shaman";
+
+/**
+ * The game models each class twice, once per body. `w` rather than `f` because
+ * that is how the icon files in public/images/class-icons are named.
+ */
+export type Gender = "m" | "w";
 
 export type ClassFilterId =
   | "all"
@@ -116,12 +123,39 @@ export const CLASS_FILTERS: { id: ClassFilterId; label: string; short: string }[
   { id: "heal", label: "Top Heal", short: "Heal" },
 ];
 
+/**
+ * Class filter to the code the league endpoint expects. The game server lists
+ * them in its own 400: `Use: all, resu, br, sw, ar, sh, heal`. Keep this total
+ * over ClassFilterId, so adding a filter cannot silently skip the mapping.
+ */
+export const LEAGUE_CATEGORY: Record<ClassFilterId, string> = {
+  all: "all",
+  resurrection: "resu",
+  brawler: "br",
+  swordsman: "sw",
+  archer: "ar",
+  shaman: "sh",
+  heal: "heal",
+};
+
 export const CLASSES: Record<ClassId, { label: string }> = {
   brawler: { label: "Brawler" },
   swordsman: { label: "Swordsman" },
   archer: { label: "Archer" },
   shaman: { label: "Shaman" },
 };
+
+/** Filename stem of each class in public/images/class-icons. */
+export const CLASS_ICON_STEM: Record<ClassId, string> = {
+  brawler: "br",
+  swordsman: "sm",
+  archer: "ar",
+  shaman: "sh",
+};
+
+export function classIconSrc(classId: ClassId, gender: Gender): string {
+  return `/images/class-icons/${CLASS_ICON_STEM[classId]}_${gender}.webp`;
+}
 
 export const SCHOOLS: Record<SchoolId, { name: string; short: string; crest: string }> = {
   "sacred-gate": { name: "Sacred Gate", short: "SG", crest: "/images/SG.webp" },
@@ -131,6 +165,7 @@ export const SCHOOLS: Record<SchoolId, { name: string; short: string; crest: str
 
 const SCHOOL_IDS: SchoolId[] = ["sacred-gate", "mystic-peak", "phoenix"];
 const CLASS_IDS: ClassId[] = ["brawler", "swordsman", "archer", "shaman"];
+const GENDERS: Gender[] = ["m", "w"];
 const TIERS: GuildTier[] = ["S", "A", "B", "C", "D", "E"];
 
 /** Classes that a class filter resolves to. `all` keeps the mixed board. */
@@ -148,11 +183,17 @@ export type PlayerRow = {
   name: string;
   level: number;
   classId: ClassId;
+  gender: Gender;
   school: SchoolId;
   guild: string | null;
 };
 
-export type LeagueRow = PlayerRow & { wins: number; losses: number };
+export type LeagueRow = PlayerRow & {
+  wins: number;
+  losses: number;
+  /** Live from the game server, true only while the character is logged in. */
+  online: boolean;
+};
 export type GoldRow = PlayerRow & { gold: number };
 export type PkRow = PlayerRow & { kills: number; deaths: number };
 
@@ -228,26 +269,12 @@ function fighters(key: string, filter: ClassFilterId): PlayerRow[] {
         ? CAP_LEVEL
         : random.int(CAP_LEVEL - 7, CAP_LEVEL - 1),
     classId: fixed ?? random.pick(CLASS_IDS),
+    gender: random.pick(GENDERS),
     school: random.pick(SCHOOL_IDS),
     guild: random.chance(0.82)
       ? `DummyGuild${random.int(1, GUILD_POOL)}`
       : null,
   }));
-}
-
-function buildLeague(filter: ClassFilterId): LeagueRow[] {
-  const random = rng(`league:${filter}`);
-  let wins = random.int(22, 26);
-
-  return fighters(`league-roster:${filter}`, filter).map((fighter) => {
-    const row = {
-      ...fighter,
-      wins,
-      losses: random.int(0, Math.max(2, Math.round(wins * 0.8))),
-    };
-    wins = Math.max(1, wins - random.int(0, 2));
-    return row;
-  });
 }
 
 function buildGold(): GoldRow[] {
@@ -308,19 +335,25 @@ function buildGuilds(): GuildRow[] {
 /** Cache so re-renders and repeated tab visits reuse the same generated list. */
 const cache = new Map<string, BoardRow[]>();
 
-export function getBoardRows(board: BoardId, filter: ClassFilterId): BoardRow[] {
-  const key = `${board}:${board === "league" || board === "pk" ? filter : "all"}`;
+/**
+ * Placeholder rows for the boards that are not wired yet. League is absent on
+ * purpose: it comes from the game server, and a generated stand-in would put
+ * invented player names into the prerendered page.
+ */
+export function getBoardRows(
+  board: Exclude<BoardId, "league">,
+  filter: ClassFilterId,
+): BoardRow[] {
+  const key = `${board}:${board === "pk" ? filter : "all"}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
   const rows: BoardRow[] =
-    board === "league"
-      ? buildLeague(filter)
-      : board === "pk"
-        ? buildPk(filter)
-        : board === "gold"
-          ? buildGold()
-          : buildGuilds();
+    board === "pk"
+      ? buildPk(filter)
+      : board === "gold"
+        ? buildGold()
+        : buildGuilds();
 
   cache.set(key, rows);
   return rows;

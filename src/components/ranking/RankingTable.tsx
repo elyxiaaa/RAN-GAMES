@@ -163,7 +163,7 @@ function playerCells<T extends LeagueRow | GoldRow | PkRow>(
     {
       label: "Class",
       from: "md",
-      render: (row) => <ClassMark classId={row.classId} />,
+      render: (row) => <ClassMark classId={row.classId} gender={row.gender} />,
     },
     {
       label: "School",

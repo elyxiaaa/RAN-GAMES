@@ -23,6 +23,7 @@ import {
   rowSearchText,
   type ClassFilterId,
 } from "../../data/ranking";
+import { useLeagueBoard } from "../../hooks/useLeagueBoard";
 import { Podium } from "./Podium";
 import { RankingTable } from "./RankingTable";
 import { FILTER_ICON } from "./icons";
@@ -44,7 +45,17 @@ export function RankingBoard() {
   const activeFilter =
     CLASS_FILTERS.find((entry) => entry.id === state.filter) ?? CLASS_FILTERS[0];
 
-  const rows = getBoardRows(board.id, state.filter);
+  // The league board is live; the other three are still generated. The hook
+  // runs on every board so the rules of hooks hold, and only fetches on league.
+  const league = useLeagueBoard(state.filter, board.id === "league");
+  const rows =
+    board.id === "league"
+      ? league.rows
+      : getBoardRows(board.id, state.filter);
+
+  // Only the league board can be between states, because only it is fetched.
+  const pending = board.id === "league" ? league.status : "ready";
+
   const term = state.query.trim().toLowerCase();
   const matched = term
     ? rows.filter((row) => rowSearchText(row).toLowerCase().includes(term))
@@ -202,7 +213,7 @@ export function RankingBoard() {
               <p className="label text-[10px] text-rose">{board.metricNote}</p>
               <p role="status" className="text-[12px] text-rose">
                 <span className="stat-num text-[13px] text-blush">
-                  {formatInt(matched.length)}
+                  {pending === "ready" ? formatInt(matched.length) : "—"}
                 </span>{" "}
                 {term ? `matching ${noun}` : `ranked ${noun}`}
               </p>
@@ -212,7 +223,11 @@ export function RankingBoard() {
               </p>
             </div>
 
-            {visible.length ? (
+            {pending === "loading" ? (
+              <BoardSkeleton />
+            ) : pending === "error" ? (
+              <Unavailable onRetry={league.retry} />
+            ) : visible.length ? (
               <>
                 {page === 1 && !term ? (
                   <Podium rows={matched} board={board.id} />
@@ -573,6 +588,63 @@ function pageSlots(page: number, pages: number): (number | null)[] {
   });
 
   return out;
+}
+
+/**
+ * Stand-in rows while the board is in flight. The widths are a fixed list, not
+ * random, so the prerendered markup and the hydrated markup agree.
+ */
+const SKELETON_WIDTHS = [
+  "58%", "43%", "66%", "50%", "71%", "46%", "62%", "54%", "68%", "45%",
+];
+
+function BoardSkeleton() {
+  return (
+    <div className="notch border border-burgundy-900 bg-ember">
+      <p role="status" className="sr-only">
+        Loading standings
+      </p>
+
+      <div aria-hidden="true">
+        {SKELETON_WIDTHS.map((width, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-4 border-b border-burgundy-900/70 px-5 py-[18px] last:border-b-0"
+          >
+            <span className="h-3.5 w-5 shrink-0 animate-pulse bg-burgundy-900 motion-reduce:animate-none" />
+            <span
+              className="h-3.5 animate-pulse bg-burgundy-900 motion-reduce:animate-none"
+              style={{ width }}
+            />
+            <span className="ml-auto h-3.5 w-16 shrink-0 animate-pulse bg-burgundy-900 motion-reduce:animate-none" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** The board was reachable but the game server was not. */
+function Unavailable({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div
+      role="status"
+      className="notch border border-burgundy-900 bg-ember px-6 py-14 text-center"
+    >
+      <p className="display text-[24px]">Standings are out of reach</p>
+      <p className="mx-auto mt-3 max-w-[46ch] text-[14px] leading-relaxed text-rose">
+        The ranking server did not answer. Nothing is wrong on your end, and the
+        board comes back on its own once it does.
+      </p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="label mt-6 min-h-11 border border-burgundy-700 px-4 text-[10px] text-blush transition-colors duration-150 hover:border-crimson"
+      >
+        Try again
+      </button>
+    </div>
+  );
 }
 
 function Empty({
