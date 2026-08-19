@@ -1,5 +1,5 @@
 /**
- * Shared JSON proxy for the game server's API.
+ * Shared proxy for the game server's API: JSON boards and emblem images.
  *
  * Deliberately outside functions/: that directory is Cloudflare's file-based
  * router, every file in it becomes a public route, and there is no documented
@@ -29,6 +29,16 @@ const TIMEOUT_MS = 6000;
 
 /** A failure must never be cached, or one bad minute outlives the outage. */
 const CACHE_FAIL = "no-store";
+
+/**
+ * What each kind of route asks for, and what it will accept back. The prefix is
+ * checked against the response before anything is stored, so a sign-in page
+ * cannot be cached in place of the resource that was asked for.
+ */
+const EXPECTED = {
+  json: { accept: "application/json", prefix: "application/json" },
+  image: { accept: "image/*", prefix: "image/" },
+} as const;
 
 export type ProxyOptions = {
   route: Route;
@@ -70,7 +80,10 @@ export async function proxyJson(
 ): Promise<Response> {
   const { route } = options;
   const incoming = new URL(context.request.url);
-  const upstream = new URL(route.path, options.origin);
+
+  // The upstream path can differ from ours: the game server spells its emblem
+  // endpoint /api/GuildIcon, while this site serves it at /api/guild-icon.
+  const upstream = new URL(route.upstream ?? route.path, options.origin);
 
   // The cache key is this site's own path plus the accepted parameters, built
   // in the fixed order of `forward` so it is deterministic. Never the upstream
@@ -83,6 +96,18 @@ export async function proxyJson(
     if (value === null) continue;
 
     if (!allowed.includes(value)) {
+      return fail(400, `Unsupported ${name}.`);
+    }
+
+    key.searchParams.set(name, value);
+    upstream.searchParams.set(name, value);
+  }
+
+  for (const [name, pattern] of Object.entries(route.match ?? {})) {
+    const value = incoming.searchParams.get(name);
+    if (value === null) continue;
+
+    if (!pattern.test(value)) {
       return fail(400, `Unsupported ${name}.`);
     }
 
@@ -106,23 +131,40 @@ export async function proxyJson(
 
   try {
     response = await fetch(upstream.toString(), {
-      headers: { accept: "application/json" },
+      headers: { accept: EXPECTED[route.expect].accept },
       signal: AbortSignal.timeout(TIMEOUT_MS),
+      // Never followed. An endpoint behind a login answers 3xx to the sign-in
+      // page, and following it would turn an auth wall into a 200 carrying
+      // HTML, which is exactly the thing that must not reach the cache.
+      redirect: "manual",
     });
   } catch {
     return fail(504, "Upstream did not answer.");
+  }
+
+  if (response.status >= 300 && response.status < 400) {
+    return fail(502, "Upstream redirected, which usually means it wants a login.");
   }
 
   if (!response.ok) {
     return fail(502, `Upstream responded ${response.status}.`);
   }
 
-  // Passed through verbatim rather than reparsed, so this proxy can never
-  // disagree with the game server about the shape of its own payload.
-  const fresh = new Response(await response.text(), {
+  // The second half of the same guard: a server can answer 200 with a login
+  // page just as easily as it can redirect to one. Nothing is cached until its
+  // content type is the kind this route asked for.
+  const type = response.headers.get("content-type") ?? "";
+  if (!type.startsWith(EXPECTED[route.expect].prefix)) {
+    return fail(502, `Upstream returned ${type || "no content type"}.`);
+  }
+
+  // Bytes, not text: this carries images as well as JSON, and decoding a PNG
+  // through a string would corrupt it. Passed through verbatim either way, so
+  // the proxy can never disagree with the game server about its own payload.
+  const fresh = new Response(await response.arrayBuffer(), {
     status: 200,
     headers: {
-      "content-type": "application/json; charset=utf-8",
+      "content-type": type,
       "cache-control": `public, max-age=${route.ttl}, s-maxage=${route.ttl}`,
     },
   });

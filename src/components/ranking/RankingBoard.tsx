@@ -18,16 +18,16 @@ import {
   CLASS_FILTERS,
   PAGE_SIZE,
   RANKING_META,
+  GUILD_LEVEL_MAX,
   formatInt,
-  getBoardRows,
   rowSearchText,
   type ClassFilterId,
 } from "../../data/ranking";
-import { useLeagueBoard } from "../../hooks/useLeagueBoard";
+import { useBoardRows } from "../../hooks/useBoardRows";
 import { Podium } from "./Podium";
 import { RankingTable } from "./RankingTable";
 import { FILTER_ICON } from "./icons";
-import { TierMark } from "./marks";
+import { GuildLevelMark } from "./marks";
 import { QUERY_MAX, useBoardState } from "./useBoardState";
 
 /** Height of the sticky tab strip, so the filter rail can sit below it. */
@@ -45,16 +45,12 @@ export function RankingBoard() {
   const activeFilter =
     CLASS_FILTERS.find((entry) => entry.id === state.filter) ?? CLASS_FILTERS[0];
 
-  // The league board is live; the other three are still generated. The hook
-  // runs on every board so the rules of hooks hold, and only fetches on league.
-  const league = useLeagueBoard(state.filter, board.id === "league");
-  const rows =
-    board.id === "league"
-      ? league.rows
-      : getBoardRows(board.id, state.filter);
+  /** Null on boards whose endpoint takes no class category. */
+  const filters = board.categories;
 
-  // Only the league board can be between states, because only it is fetched.
-  const pending = board.id === "league" ? league.status : "ready";
+  const live = useBoardRows(board.id, state.filter, filters !== null);
+  const rows = live.rows;
+  const pending = live.status;
 
   const term = state.query.trim().toLowerCase();
   const matched = term
@@ -93,12 +89,15 @@ export function RankingBoard() {
   };
 
   const onTabKeys = (event: KeyboardEvent<HTMLElement>) => {
-    const index = BOARDS.findIndex((entry) => entry.id === board.id);
-    const next = moveIndex(event.key, index, BOARDS.length, "horizontal");
+    // Only selectable boards take part: a tab marked "Soon" carries no data-nav
+    // and cannot be arrowed onto.
+    const open = BOARDS.filter((entry) => !entry.soon);
+    const index = open.findIndex((entry) => entry.id === board.id);
+    const next = moveIndex(event.key, index, open.length, "horizontal");
     if (next === null) return;
 
     event.preventDefault();
-    update({ board: BOARDS[next].id });
+    update({ board: open[next].id });
     focusIn(tabsRef.current, next);
   };
 
@@ -118,6 +117,29 @@ export function RankingBoard() {
           >
             {BOARDS.map((entry) => {
               const active = entry.id === board.id;
+
+              if (entry.soon) {
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    role="tab"
+                    id={`${panelId}-tab-${entry.id}`}
+                    aria-selected={false}
+                    aria-disabled="true"
+                    aria-controls={panelId}
+                    tabIndex={-1}
+                    title={`${entry.title} rankings are coming soon`}
+                    onClick={(event) => event.preventDefault()}
+                    className="label group flex shrink-0 cursor-not-allowed items-center gap-2 px-3.5 text-[11px] text-rose/45 transition-colors hover:text-rose sm:px-6"
+                  >
+                    {entry.label}
+                    <span className="label whitespace-nowrap border border-burgundy-800 px-1.5 py-1 text-[8px] leading-none text-rose/70 transition-colors group-hover:border-crimson group-hover:text-crimson-hot">
+                      Soon
+                    </span>
+                  </button>
+                );
+              }
 
               return (
                 <button
@@ -171,7 +193,7 @@ export function RankingBoard() {
             <span aria-hidden="true" className="mb-4 block h-[3px] w-10 bg-crimson" />
             <h2 className="display text-[30px] sm:text-[38px]">
               {board.title}
-              {board.classFilters && state.filter !== "all" ? (
+              {filters && state.filter !== "all" ? (
                 <span className="text-crimson-hot">
                   {" / "}
                   {activeFilter.short}
@@ -195,17 +217,24 @@ export function RankingBoard() {
         {/* The rail keeps its column on every board, so switching tabs never
             shifts the table sideways. */}
         <div className="grid gap-8 lg:grid-cols-[210px_minmax(0,1fr)]">
-          <div className="lg:sticky lg:self-start" style={{ top: RAIL_TOP }}>
-            {board.classFilters ? (
+          {/* min-w-0: a grid item defaults to min-width:auto, so without this the
+              rail cannot shrink below its own min-content and the whole page
+              widens to fit seven filter buttons instead of scrolling them. */}
+          <div
+            className="min-w-0 lg:sticky lg:self-start"
+            style={{ top: RAIL_TOP }}
+          >
+            {filters ? (
               <ClassRail
+                options={filters}
                 value={state.filter}
                 onChange={(filter) => update({ filter })}
               />
             ) : board.id === "guild" ? (
               <GuildLegend />
-            ) : (
+            ) : board.id === "gold" ? (
               <GoldLegend />
-            )}
+            ) : null}
           </div>
 
           <div className="min-w-0">
@@ -226,7 +255,7 @@ export function RankingBoard() {
             {pending === "loading" ? (
               <BoardSkeleton />
             ) : pending === "error" ? (
-              <Unavailable onRetry={league.retry} />
+              <Unavailable onRetry={live.retry} />
             ) : visible.length ? (
               <>
                 {page === 1 && !term ? (
@@ -250,7 +279,7 @@ export function RankingBoard() {
               <Empty
                 query={state.query}
                 noun={noun}
-                filter={board.classFilters ? activeFilter.label : null}
+                filter={filters ? activeFilter.label : null}
                 onClear={() => update({ query: "" })}
               />
             )}
@@ -266,21 +295,28 @@ export function RankingBoard() {
 /* -------------------------------------------------------------------------- */
 
 function ClassRail({
+  options,
   value,
   onChange,
 }: {
+  /** Filters this board's endpoint accepts. Not every board takes all seven. */
+  options: ClassFilterId[];
   value: ClassFilterId;
   onChange: (next: ClassFilterId) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
+  // Filtered from the full list rather than built from it, so the rail keeps
+  // one running order no matter which subset a board offers.
+  const entries = CLASS_FILTERS.filter((entry) => options.includes(entry.id));
+
   const onKeys = (event: KeyboardEvent<HTMLElement>) => {
-    const index = CLASS_FILTERS.findIndex((entry) => entry.id === value);
-    const next = moveIndex(event.key, index, CLASS_FILTERS.length, "both");
+    const index = entries.findIndex((entry) => entry.id === value);
+    const next = moveIndex(event.key, index, entries.length, "both");
     if (next === null) return;
 
     event.preventDefault();
-    onChange(CLASS_FILTERS[next].id);
+    onChange(entries[next].id);
     ref.current?.querySelectorAll<HTMLButtonElement>("[data-nav]")[next]?.focus();
   };
 
@@ -294,7 +330,7 @@ function ClassRail({
     >
       <p className="label hidden pb-3 text-[10px] text-rose lg:block">Class</p>
 
-      {CLASS_FILTERS.map((entry) => {
+      {entries.map((entry) => {
         const active = entry.id === value;
 
         return (
@@ -383,18 +419,22 @@ function GoldLegend() {
 
 /** The guild board's Level column holds a letter grade, which needs a key. */
 function GuildLegend() {
+  const levels = Array.from({ length: GUILD_LEVEL_MAX + 1 }, (_, i) =>
+    GUILD_LEVEL_MAX - i,
+  );
+
   return (
     <Legend
-      heading="Guild grade"
-      note="Resu counts resurrections cast by members. Alliance counts allied guilds."
+      heading="Guild level"
+      note="Drawn counts sieges that ended level. Alliance counts allied guilds."
     >
       <div className="mt-3 flex flex-wrap gap-1.5 lg:mt-4">
-        {(["S", "A", "B", "C", "D", "E"] as const).map((tier) => (
-          <TierMark key={tier} tier={tier} />
+        {levels.map((level) => (
+          <GuildLevelMark key={level} level={level} />
         ))}
       </div>
       <p className="mt-3 text-[12px] leading-relaxed text-blush/90">
-        S is the highest grade, E the lowest.
+        {GUILD_LEVEL_MAX} is the highest level a guild reaches, 0 the lowest.
       </p>
     </Legend>
   );
@@ -420,7 +460,7 @@ function Search({
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <div className="flex h-11 items-center gap-2.5 border border-burgundy-900 bg-ember pl-3.5 pr-1.5 transition-colors focus-within:border-crimson md:w-[264px]">
+      <div className="flex h-11 items-center gap-2.5 border border-burgundy-900 bg-ember pl-3.5 transition-colors focus-within:border-crimson md:w-[264px]">
         <MagnifyingGlass
           size={16}
           weight="bold"
@@ -444,14 +484,16 @@ function Search({
           autoCapitalize="off"
           enterKeyHint="search"
           maxLength={QUERY_MAX}
-          className="min-w-0 flex-1 bg-transparent text-[14px] text-blush outline-none placeholder:text-rose/85 [&::-webkit-search-cancel-button]:hidden"
+          // self-stretch: without it the input is only as tall as its text,
+          // leaving most of the bar untappable on a touch screen.
+          className="min-w-0 flex-1 self-stretch bg-transparent text-[14px] text-blush outline-none placeholder:text-rose/85 [&::-webkit-search-cancel-button]:hidden"
         />
         <button
           type="button"
           onClick={() => onChange("")}
           aria-label="Clear search"
           tabIndex={value ? 0 : -1}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center text-rose transition-colors hover:text-crimson-hot ${
+          className={`flex h-11 w-11 shrink-0 items-center justify-center text-rose transition-colors hover:text-crimson-hot ${
             value ? "" : "invisible"
           }`}
         >
@@ -500,7 +542,7 @@ function Pagination({
         of <span className="stat-num text-[13px] text-blush">{formatInt(total)}</span>
       </p>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
         <PageStep
           label="Previous page"
           disabled={page === 1}

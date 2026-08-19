@@ -12,16 +12,16 @@ import {
   type GoldRow,
   type GuildRow,
   type LeagueRow,
-  type PkRow,
+  type MmrRow,
 } from "../../data/ranking";
 import {
   BadgeMark,
   ClassMark,
+  GuildLevelMark,
   GuildTag,
   RankMark,
   SchoolCrest,
   ScoreSplit,
-  TierMark,
 } from "./marks";
 
 type Align = "left" | "center" | "right";
@@ -53,7 +53,8 @@ const VISIBLE: Record<From, string> = {
   lg: "hidden lg:table-cell",
 };
 
-const PAD = "px-3 py-3.5 first:pl-5 last:pr-5 align-middle";
+const PAD =
+  "px-2 py-3.5 align-middle first:pl-3 last:pr-3 sm:px-3 sm:first:pl-5 sm:last:pr-5";
 
 /* -------------------------------------------------------------------------- */
 /* Shared cell pieces                                                         */
@@ -75,7 +76,7 @@ function Name({
   return (
     <>
       <span
-        className={`block break-words text-[15px] transition-colors ${
+        className={`block [overflow-wrap:anywhere] text-[15px] transition-colors ${
           rank <= 3
             ? "display normal-case text-[17px] text-blush"
             : "text-blush/90 group-hover:text-blush"
@@ -140,7 +141,7 @@ function Centred({ children }: { children: ReactNode }) {
 /* -------------------------------------------------------------------------- */
 
 /** Rank, name, level, class, school: the opening of every player board. */
-function playerCells<T extends LeagueRow | GoldRow | PkRow>(
+function playerCells<T extends LeagueRow | MmrRow | GoldRow>(
   fold: (row: T) => ReactNode,
 ): Cell<T>[] {
   return [
@@ -178,7 +179,7 @@ function playerCells<T extends LeagueRow | GoldRow | PkRow>(
   ];
 }
 
-const foldPlayer = (row: LeagueRow | GoldRow | PkRow, withGuild: boolean) => (
+const foldPlayer = (row: LeagueRow | MmrRow | GoldRow, withGuild: boolean) => (
   <>
     <Folded until="sm">Lv {row.level}</Folded>
     <Folded until="md">{CLASSES[row.classId].label}</Folded>
@@ -191,7 +192,7 @@ const foldPlayer = (row: LeagueRow | GoldRow | PkRow, withGuild: boolean) => (
   </>
 );
 
-const guildColumn = <T extends LeagueRow | GoldRow>(): Cell<T> => ({
+const guildColumn = <T extends LeagueRow | MmrRow | GoldRow>(): Cell<T> => ({
   label: "Guild",
   from: "md",
   render: (row) => <GuildTag guild={row.guild} />,
@@ -199,9 +200,9 @@ const guildColumn = <T extends LeagueRow | GoldRow>(): Cell<T> => ({
 
 const CELLS: {
   league: Cell<LeagueRow>[];
+  mmr: Cell<MmrRow>[];
   gold: Cell<GoldRow>[];
   guild: Cell<GuildRow>[];
-  pk: Cell<PkRow>[];
 } = {
   league: [
     ...playerCells<LeagueRow>((row) => foldPlayer(row, true)),
@@ -229,11 +230,16 @@ const CELLS: {
       hint: "Gold carried on the character",
       render: (row) => (
         <span
-          className="inline-flex items-center gap-2 text-crimson-hot"
+          className="inline-flex items-center gap-0 text-crimson-hot sm:gap-2"
           title={`${formatInt(row.gold)} gold`}
         >
-          <Coins size={15} weight="fill" aria-hidden="true" className="shrink-0" />
-          <span className="stat-num text-[16px] leading-none text-blush">
+          <Coins
+            size={15}
+            weight="fill"
+            aria-hidden="true"
+            className="hidden shrink-0 sm:block"
+          />
+          <span className="stat-num text-[15px] leading-none text-blush sm:text-[16px]">
             {formatGold(row.gold)}
           </span>
         </span>
@@ -241,18 +247,25 @@ const CELLS: {
     },
   ],
 
-  pk: [
-    ...playerCells<PkRow>((row) => foldPlayer(row, false)),
+  mmr: [
+    ...playerCells<MmrRow>((row) => foldPlayer(row, true)),
+    guildColumn<MmrRow>(),
     {
-      label: "Kills / Death",
+      label: "Rating",
       align: "right",
-      hint: "Open field kills and deaths",
+      hint: "Matchmaking rating, and the bracket it falls in",
       render: (row) => (
-        <ScoreSplit
-          gain={row.kills}
-          loss={row.deaths}
-          label={`${row.kills} kills, ${row.deaths} deaths`}
-        />
+        <span
+          className="inline-flex flex-col items-end gap-1"
+          title={`${formatInt(row.rating)} rating, bracket ${row.bracket}`}
+        >
+          <span className="stat-num text-[15px] leading-none text-blush sm:text-[16px]">
+            {formatInt(row.rating)}
+          </span>
+          <span className="label text-[9px] leading-none text-rose">
+            Bracket {row.bracket}
+          </span>
+        </span>
       ),
     },
   ],
@@ -264,13 +277,13 @@ const CELLS: {
       rowHeader: true,
       render: (row) => (
         <Name name={row.guild} rank={row.rank}>
-          <Folded until="md">Grade {row.tier}</Folded>
+          <Folded until="md">Lv {row.level}</Folded>
           <Folded until="sm">{row.members} members</Folded>
           <Folded until="md">{row.online} online</Folded>
           <Folded until="lg">
             {row.alliance ? `${row.alliance} alliance` : "No alliance"}
           </Folded>
-          <Folded until="lg">{formatInt(row.resu)} resu</Folded>
+          <Folded until="lg">{formatInt(row.draws)} drawn</Folded>
         </Name>
       ),
     },
@@ -278,10 +291,10 @@ const CELLS: {
       label: "Level",
       align: "center",
       from: "md",
-      hint: "Guild grade, S is the highest",
+      hint: "Guild level, 0 to 5",
       render: (row) => (
         <Centred>
-          <TierMark tier={row.tier} />
+          <GuildLevelMark level={row.level} />
         </Centred>
       ),
     },
@@ -291,7 +304,12 @@ const CELLS: {
       from: "lg",
       render: (row) => (
         <Centred>
-          <BadgeMark badge={row.badge} tier={row.tier} />
+          <BadgeMark
+            badge={row.badge}
+            level={row.level}
+            guNum={row.guNum}
+            guild={row.guild}
+          />
         </Centred>
       ),
     },
@@ -323,36 +341,36 @@ const CELLS: {
       ),
     },
     {
-      label: "Kills",
+      label: "Won",
       align: "right",
       render: (row) => (
         <>
-          {/* Until the Death column arrives at md, kills carries both numbers. */}
+          {/* Until the Lost column arrives at md, this carries both numbers. */}
           <span className="md:hidden">
             <ScoreSplit
-              gain={row.kills}
-              loss={row.deaths}
-              label={`${row.kills} kills, ${row.deaths} deaths`}
+              gain={row.wins}
+              loss={row.losses}
+              label={`${row.wins} won, ${row.losses} lost`}
             />
           </span>
           <span className="hidden md:inline">
-            <Count value={row.kills} tone="win" />
+            <Count value={row.wins} tone="win" />
           </span>
         </>
       ),
     },
     {
-      label: "Death",
+      label: "Lost",
       align: "right",
       from: "md",
-      render: (row) => <Count value={row.deaths} tone="loss" />,
+      render: (row) => <Count value={row.losses} tone="loss" />,
     },
     {
-      label: "Resu",
+      label: "Drawn",
       align: "right",
       from: "lg",
-      hint: "Resurrections performed",
-      render: (row) => <Count value={row.resu} tone="loud" />,
+      hint: "Sieges that ended level",
+      render: (row) => <Count value={row.draws} tone="loud" />,
     },
   ],
 };
@@ -387,8 +405,14 @@ export function RankingTable({ board, rows }: { board: BoardId; rows: BoardRow[]
   if (board === "guild") {
     return <Board cells={CELLS.guild} rows={rows as GuildRow[]} caption="Top guilds" />;
   }
-  if (board === "pk") {
-    return <Board cells={CELLS.pk} rows={rows as PkRow[]} caption="Top players on the PK map" />;
+  if (board === "mmr") {
+    return (
+      <Board
+        cells={CELLS.mmr}
+        rows={rows as MmrRow[]}
+        caption="Top players by matchmaking rating"
+      />
+    );
   }
   return (
     <Board cells={CELLS.league} rows={rows as LeagueRow[]} caption="Top players in the league" />
@@ -416,7 +440,7 @@ function Board<T extends BoardRow>({
                 key={cell.label}
                 scope="col"
                 title={cell.hint}
-                className={`label whitespace-nowrap px-3 py-3 text-[10px] text-rose first:pl-5 last:pr-5 ${
+                className={`label whitespace-nowrap px-2 py-3 text-[10px] text-rose first:pl-3 last:pr-3 sm:px-3 sm:first:pl-5 sm:last:pr-5 ${
                   ALIGN[cell.align ?? "left"]
                 } ${cell.from ? VISIBLE[cell.from] : ""}`}
               >
@@ -444,7 +468,7 @@ function Board<T extends BoardRow>({
                   <th
                     key={cell.label}
                     scope="row"
-                    className={`${className} min-w-[9rem] font-normal`}
+                    className={`${className} min-w-[7rem] font-normal sm:min-w-[9rem]`}
                   >
                     {cell.render(row)}
                   </th>

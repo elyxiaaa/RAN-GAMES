@@ -11,7 +11,7 @@ import {
   type GoldRow,
   type GuildRow,
   type LeagueRow,
-  type PkRow,
+  type MmrRow,
   type SchoolId,
 } from "../../data/ranking";
 import { ClassIcon, GuildTag, SchoolCrest } from "./marks";
@@ -57,16 +57,16 @@ function seatOf(row: BoardRow, board: BoardId): Seat {
       name: guild.guild,
       detail: `${guild.members} members, ${guild.online} online`,
       detailIcon: <UsersThree size={15} weight="fill" />,
-      levelLabel: `Grade ${guild.tier}`,
+      levelLabel: `Lv ${guild.level}`,
       school: null,
-      score: split(guild.kills, guild.deaths),
-      value: guild.kills,
-      metricNote: "Kills – Deaths",
-      unit: ["kill", "kills"],
+      score: split(guild.wins, guild.losses),
+      value: guild.wins,
+      metricNote: "Wins – Losses",
+      unit: ["win", "wins"],
     };
   }
 
-  const player = row as LeagueRow | GoldRow | PkRow;
+  const player = row as LeagueRow | MmrRow | GoldRow;
   const base = {
     rank: player.rank,
     name: player.name,
@@ -101,13 +101,15 @@ function seatOf(row: BoardRow, board: BoardId): Seat {
     };
   }
 
-  const pk = row as PkRow;
+  const mmr = row as MmrRow;
   return {
     ...base,
-    score: split(pk.kills, pk.deaths),
-    value: pk.kills,
-    metricNote: "Kills – Deaths",
-    unit: ["kill", "kills"],
+    guild: mmr.guild,
+    score: <span className="text-blush">{formatInt(mmr.rating)}</span>,
+    scoreTitle: `${formatInt(mmr.rating)} rating, bracket ${mmr.bracket}`,
+    value: mmr.rating,
+    metricNote: `Rating · bracket ${mmr.bracket}`,
+    unit: ["point", "points"],
   };
 }
 
@@ -178,10 +180,13 @@ function PodiumCard({
           aria-hidden="true"
           loading="lazy"
           decoding="async"
-          className={`pointer-events-none absolute -right-5 -top-5 select-none object-contain ${
+          // Cropped to the emblem: the crest art ends in a school wordmark,
+          // and the card's overflow cut it mid-word, which read as broken text
+          // rather than as a watermark.
+          className={`pointer-events-none absolute -right-5 -top-5 select-none object-cover object-top ${
             lead ? "opacity-[0.16]" : "opacity-[0.09]"
           }`}
-          style={{ width: lead ? 190 : 140, height: lead ? 190 : 140 }}
+          style={{ width: lead ? 190 : 140, height: lead ? 148 : 109 }}
         />
       ) : null}
 
@@ -214,7 +219,7 @@ function PodiumCard({
       </div>
 
       <h4
-        className={`display relative mt-4 break-words normal-case ${
+        className={`display relative mt-4 normal-case [overflow-wrap:anywhere] ${
           lead ? "text-[34px] sm:text-[42px]" : "text-[25px] sm:text-[29px]"
         }`}
       >

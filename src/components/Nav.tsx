@@ -92,7 +92,9 @@ export function Nav({ route = "home" }: { route?: Route }) {
         visible ? "translate-y-0" : "-translate-y-full"
       }`}
     >
-      <div className="mx-auto flex h-[var(--nav-h)] max-w-shell items-center justify-between gap-6 px-4 sm:px-6 lg:px-10">
+      {/* gap tightens at lg: the nav appears there, and logo + links + actions
+          only just fit 1024px. It relaxes again once xl has room to spare. */}
+      <div className="mx-auto flex h-[var(--nav-h)] max-w-shell items-center justify-between gap-3 px-4 sm:px-6 lg:gap-4 lg:px-10 xl:gap-6">
         <a
           href={onHome ? "#top" : "/"}
           className="shrink-0 py-1 transition-opacity hover:opacity-80"
@@ -115,14 +117,14 @@ export function Nav({ route = "home" }: { route?: Route }) {
                     aria-current={
                       current ? (item.route ? "page" : "location") : undefined
                     }
-                    className={`label group relative block px-4 py-2.5 text-[11px] transition-colors ${
+                    className={`label group relative block px-3 py-2.5 text-[11px] transition-colors xl:px-4 ${
                       current ? "text-blush" : "text-rose hover:text-blush"
                     }`}
                   >
                     {item.label}
                     <span
                       aria-hidden="true"
-                      className={`absolute inset-x-4 bottom-1 h-[2px] origin-left bg-crimson transition-transform duration-200 ease-out ${
+                      className={`absolute inset-x-3 bottom-1 h-[2px] origin-left bg-crimson transition-transform duration-200 ease-out xl:inset-x-4 ${
                         current ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
                       }`}
                     />

@@ -81,7 +81,7 @@ export function Footer({ route = "home" }: { route?: Route }) {
                           ? `${base}${link.href}`
                           : link.href
                       }
-                      className="inline-block py-2 text-[14px] text-rose transition-colors hover:text-crimson-hot"
+                      className="inline-flex min-h-11 items-center py-2 text-[14px] text-rose transition-colors hover:text-crimson-hot"
                       {...(link.href.startsWith("http")
                         ? { target: "_blank", rel: "noreferrer" }
                         : {})}

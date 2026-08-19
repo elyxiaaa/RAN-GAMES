@@ -431,10 +431,9 @@ replace it with a branded page; nothing else in the build needs to change.
 
 ## Live game server data
 
-Two surfaces are live from the game server rather than from a data file: the
-hero readout (total characters, overall and per school) and the league
-standings board on /ranking. Top Gold, Top Guild and PK Map are still
-generated placeholders in [src/data/ranking.ts](src/data/ranking.ts).
+The hero readout (total characters, overall and per school) and four of the
+five ranking boards are live from the game server. PK Map has no endpoint
+yet and its tab is marked `soon`: not selectable, by URL either.
 
 **The game server speaks plain HTTP only.** A page served over HTTPS cannot call
 an `http://` endpoint at all: the browser blocks it as mixed content, before any
@@ -450,10 +449,46 @@ browser never calls the game server. It calls this site's own origin at
 Both build their requests from one table, [server/routes.ts](server/routes.ts),
 so what is pinned, forwarded and refused cannot drift between them:
 
-| Endpoint | Caller may set | Pinned by us | Edge TTL |
+| Board | Endpoint | Caller may set | Edge TTL |
 | --- | --- | --- | --- |
-| `/api/stats` | nothing | — | 30s |
-| `/api/ranking/league` | `category` (`all, resu, br, sw, ar, sh, heal`) | `page=1`, `pageSize=50` | 300s |
+| — | `/api/stats` | nothing | 30s |
+| League | `/api/ranking/league` | `category`: all, resu, br, sw, ar, sh, heal | 300s |
+| Top MMR | `/api/ranking/mmr` | `category`: the same **minus `heal`** | 300s |
+| Top Gold | `/api/ranking/currency` | nothing | 300s |
+| Top Guild | `/api/ranking/guild` | nothing | 300s |
+| Guild emblems | `/api/guild-icon` | `guNum`: 1-5 digits | 24h |
+
+Every board pins `page=1` and `pageSize=50`. Top Gold also pins `type=gold`, the
+only currency the server accepts today; its 400 mentions epoint and gpoint
+"if SP provides them".
+
+**The category lists are not the same.** MMR answers 400 for `heal` where League
+answers 200, so the filter rail is per board (`BOARDS[].categories`). A stale
+`?class=heal` in the URL falls back to `all` on MMR rather than requesting a
+category that can only fail.
+
+### Guild emblems
+
+Emblems are PNGs, not JSON, so `server/proxy.ts` passes bytes rather than text
+and keeps the upstream content type. Two guards go with that:
+
+- **Redirects are never followed** (`redirect: "manual"`). An endpoint behind a
+  login answers 3xx to a sign-in page; following it would turn an auth wall
+  into a 200 carrying HTML, and that HTML would be cached as the emblem.
+- **The content type must match `route.expect`** before anything is stored, because
+  a server can answer 200 with a login page just as easily as it can redirect
+  to one.
+
+`guNum` has no fixed list, so it is validated by shape (`match`) rather than by an
+enum: digits only, at most five. That bound is the cache's protection --
+without it a caller could mint unlimited entries by counting upwards.
+
+**This endpoint does not work yet.** Upstream it is `/api/GuildIcon`, and unlike
+every other route it ignores `apiToken` and redirects anonymous callers to
+`/Identity/Account/Login`. The proxy refuses that with a 502 and the guild board
+falls back to its generic mark, so nothing is broken while it waits. It will
+start working with no change here once the game server accepts the API token
+on that action.
 
 The Vite proxy is a stand-in for local work only. It forwards straight
 upstream and does no caching, so `x-cache` never appears there. To exercise the
@@ -506,13 +541,14 @@ stop someone deliberately hammering the endpoint across datacenters. That is a
 Rate Limiting rule in the dashboard, matching `path contains "/api/"`, which also
 covers anything added under `/api/` later.
 
-### The league board
+### The boards
 
-The game server caps `pageSize` at 50 and never reports a total above it, so
-one request is the entire board. That is why `page` is pinned and the search
-term is never sent: [RankingBoard](src/components/ranking/RankingBoard.tsx)
-pages and searches the 50 rows locally, which keeps the cache down to one
-entry per category instead of one per category, page and search string.
+The game server caps `pageSize` at 50 on every board and never reports a total
+above it, so one request is always the entire board. That is why `page` is
+pinned and the search term is never sent:
+[RankingBoard](src/components/ranking/RankingBoard.tsx) pages and searches
+those rows locally, which keeps the cache to one entry per board and category
+instead of one per board, category, page and search string.
 
 Class and body come from `classLabel` (`"Archer [F]"`), never from the numeric
 `chaClass`. The live board returns 1, 2, 4, 8, 64 and 256 for six
@@ -520,9 +556,15 @@ combinations, which is not one consistent bit pattern, so the number cannot
 be decoded without guessing. Icons resolve to
 `public/images/class-icons/{br,sm,ar,sh}_{m,w}.webp`.
 
-Guild names arrive padded to a fixed database width and are trimmed on parse.
-A row missing a name, rank, school or readable class is dropped rather than
-rendered with a placeholder standing in for real data.
+Guild names arrive padded to a fixed database width and are trimmed on parse;
+an empty one means no guild. A row missing a name, rank, school or readable
+class is dropped rather than rendered with a placeholder standing in for real
+data.
+
+**Guild level is the server's `guRank`, 0 to 5.** The S/A/B/C/D/E grades this
+board used to show were invented by the placeholder data and match nothing a
+player sees in game. The guild board also reports `win` / `loss` / `draw`,
+not the kills and resurrections the placeholder had.
 
 Nothing fetches during the prerender. The shipped HTML carries the `SNAPSHOT`
 figures in [src/data/stats.ts](src/data/stats.ts), and

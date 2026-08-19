@@ -1,9 +1,32 @@
 import { CaretRight } from "@phosphor-icons/react";
 import { MEDIA } from "../../data/content";
-import { RANKING_META } from "../../data/ranking";
+import { RANKING_META, formatInt } from "../../data/ranking";
+import { useBoardRows } from "../../hooks/useBoardRows";
+import { useServerStats } from "../../hooks/useServerStats";
 import { LiveBadge } from "../ui/LiveBadge";
 
 export function RankingHeader() {
+  const stats = useServerStats();
+
+  // Guilds are the one ranking figure that is a real count: the player boards
+  // cap `total` at 50, so "ranked fighters" cannot be sourced from them at all.
+  // The board itself shares this fetch through the hook's cache.
+  const guilds = useBoardRows("guild", "all", false);
+
+  const tiles: { id: string; label: string; value: number | null }[] = [
+    {
+      id: "characters",
+      label: "Characters created",
+      value: stats.totalCharacters,
+    },
+    { id: "online", label: "Players online", value: stats.totalOnline },
+    {
+      id: "guilds",
+      label: "Guilds ranked",
+      value: guilds.status === "ready" ? guilds.rows.length : null,
+    },
+  ];
+
   return (
     <section
       id="top"
@@ -32,7 +55,7 @@ export function RankingHeader() {
             <li>
               <a
                 href="/"
-                className="inline-block py-1 transition-colors hover:text-crimson-hot"
+                className="-ml-2 inline-flex min-h-11 items-center px-2 transition-colors hover:text-crimson-hot"
               >
                 Home
               </a>
@@ -67,14 +90,16 @@ export function RankingHeader() {
           </div>
 
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-1">
-            {RANKING_META.stats.map((stat) => (
+            {tiles.map((tile) => (
               <div
-                key={stat.id}
+                key={tile.id}
                 className="notch-sm flex flex-col-reverse gap-1.5 border border-burgundy-900 bg-ink/80 p-4 lg:flex-row lg:items-baseline lg:justify-between lg:gap-4"
               >
-                <dt className="label text-[10px] text-rose">{stat.label}</dt>
+                <dt className="label text-[10px] text-rose">{tile.label}</dt>
                 <dd className="stat-num text-[28px] leading-none lg:text-[30px]">
-                  {stat.value}
+                  {/* An em dash rather than a zero: the count is not in yet,
+                      and a zero would read as a real answer. */}
+                  {tile.value === null ? "—" : formatInt(tile.value)}
                 </dd>
               </div>
             ))}

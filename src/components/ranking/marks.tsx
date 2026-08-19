@@ -1,12 +1,14 @@
+import { useState } from "react";
 import { Crown, ShieldChevron } from "@phosphor-icons/react";
+import { guildIconUrl } from "../../data/boards";
 import {
   CLASSES,
+  GUILD_LEVEL_MAX,
   SCHOOLS,
   classIconSrc,
   formatInt,
   type ClassId,
   type Gender,
-  type GuildTier,
   type SchoolId,
 } from "../../data/ranking";
 
@@ -126,49 +128,87 @@ export function GuildTag({ guild }: { guild: string | null }) {
   );
 }
 
-const TIER_STYLE: Record<GuildTier, string> = {
-  S: "border-crimson bg-crimson/15 text-crimson-hot",
-  A: "border-burgundy-700 bg-burgundy-800/60 text-blush",
-  B: "border-burgundy-700 bg-burgundy-900/70 text-blush/90",
-  C: "border-burgundy-900 bg-ink text-rose",
-  D: "border-burgundy-900 bg-ink text-rose",
-  E: "border-burgundy-900 bg-ink text-rose",
-};
+/**
+ * Guild level styling. The server reports a plain 0 to 5 in `guRank`, so that
+ * is what is shown: the letter grades this once carried were invented by the
+ * placeholder data and match nothing a player sees in game.
+ */
+function levelStyle(level: number): string {
+  if (level >= GUILD_LEVEL_MAX) {
+    return "border-crimson bg-crimson/15 text-crimson-hot";
+  }
+  if (level >= 4) return "border-burgundy-700 bg-burgundy-800/60 text-blush";
+  if (level >= 2) return "border-burgundy-700 bg-burgundy-900/70 text-blush/90";
+  return "border-burgundy-900 bg-ink text-rose";
+}
 
-export function TierMark({ tier }: { tier: GuildTier }) {
+export function GuildLevelMark({ level }: { level: number }) {
   return (
     <span
-      className={`notch-sm inline-flex h-7 w-7 items-center justify-center border ${TIER_STYLE[tier]}`}
-      title={`Guild level ${tier}`}
+      className={`notch-sm inline-flex h-7 w-7 items-center justify-center border ${levelStyle(level)}`}
+      title={`Guild level ${level} of ${GUILD_LEVEL_MAX}`}
     >
-      <span className="stat-num text-[13px] leading-none">{tier}</span>
+      <span className="stat-num text-[13px] leading-none">{level}</span>
     </span>
   );
 }
 
-/** Guild emblem. Unbadged guilds show the game's own `[?]` placeholder. */
-export function BadgeMark({ badge, tier }: { badge: boolean; tier: GuildTier }) {
+/**
+ * Guild emblem: the bitmap the guild drew in game, fetched by guild number.
+ *
+ * Unbadged guilds show the game's own `[?]` placeholder. A badged guild whose
+ * emblem will not load falls back to the generic mark rather than a broken
+ * image, so the board stays readable while that one endpoint is unreachable.
+ */
+export function BadgeMark({
+  badge,
+  level,
+  guNum,
+  guild,
+}: {
+  badge: boolean;
+  level: number;
+  guNum: number;
+  guild: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
   if (!badge) {
     return (
       <span
         className="label inline-flex h-7 w-7 items-center justify-center border border-burgundy-900 text-[10px] text-rose"
-        title="No badge set"
+        title="No emblem set"
       >
         ?
       </span>
     );
   }
 
+  const frame = `notch-sm inline-flex h-7 w-7 items-center justify-center border ${
+    level >= 4
+      ? "border-crimson/60 bg-crimson/15 text-crimson-hot"
+      : "border-burgundy-700 bg-burgundy-900/70 text-blush/80"
+  }`;
+
   return (
-    <span
-      className={`notch-sm inline-flex h-7 w-7 items-center justify-center border ${
-        tier === "S" || tier === "A"
-          ? "border-crimson/60 bg-crimson/15 text-crimson-hot"
-          : "border-burgundy-700 bg-burgundy-900/70 text-blush/80"
-      }`}
-      title="Guild badge"
-    >
-      <ShieldChevron size={15} weight="fill" aria-hidden="true" />
+    <span className={frame} title={`${guild} emblem`}>
+      {failed ? (
+        <ShieldChevron size={15} weight="fill" aria-hidden="true" />
+      ) : (
+        <img
+          src={guildIconUrl(guNum)}
+          alt=""
+          aria-hidden="true"
+          width={18}
+          height={18}
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+          // Emblems are tiny bitmaps drawn pixel by pixel in game. Letting the
+          // browser smooth one on the way up turns pixel art into mush.
+          className="block h-[18px] w-[18px] [image-rendering:pixelated]"
+        />
+      )}
     </span>
   );
 }
@@ -187,14 +227,14 @@ export function ScoreSplit({
   label: string;
 }) {
   return (
-    <span className="inline-flex items-baseline gap-1.5" title={label}>
-      <span className="stat-num text-[16px] leading-none text-win">
+    <span className="inline-flex items-baseline gap-1 sm:gap-1.5" title={label}>
+      <span className="stat-num text-[15px] leading-none text-win sm:text-[16px]">
         {formatInt(gain)}
       </span>
-      <span aria-hidden="true" className="text-[13px] leading-none text-rose/70">
+      <span aria-hidden="true" className="text-[12px] leading-none text-rose/70">
         –
       </span>
-      <span className="stat-num text-[16px] leading-none text-crimson-hot">
+      <span className="stat-num text-[15px] leading-none text-crimson-hot sm:text-[16px]">
         {formatInt(loss)}
       </span>
     </span>

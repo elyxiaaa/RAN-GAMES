@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 import { defineConfig, loadEnv, type ProxyOptions } from 'vite'
 import react from '@vitejs/plugin-react'
 import { seo } from './plugins/vite-plugin-seo.ts'
-import { ROUTES, UPSTREAM_ORIGIN } from './server/routes.ts'
+import { ROUTES, UPSTREAM_ORIGIN, type Route } from './server/routes.ts'
 
 // One HTML entry per route. Each is prerendered by scripts/prerender.mjs after
 // the client build, so /ranking ships as a real document, not a client redirect.
@@ -26,7 +26,10 @@ export default defineConfig(({ isSsrBuild, mode }) => {
   // `npx wrangler pages dev dist` to exercise the real thing.
   const proxy: Record<string, ProxyOptions> = {}
 
-  for (const route of Object.values(ROUTES)) {
+  // Widened to Route: `satisfies` keeps each entry's literal type, so the
+  // optional `match` and `upstream` fields are absent from the ones that omit
+  // them and the loop below could not read them at all.
+  for (const route of Object.values(ROUTES) as Route[]) {
     proxy[route.path] = {
       target: origin,
       changeOrigin: true,
@@ -42,13 +45,20 @@ export default defineConfig(({ isSsrBuild, mode }) => {
           if (value !== null && allowed.includes(value)) params.set(name, value)
         }
 
+        for (const [name, pattern] of Object.entries(route.match ?? {})) {
+          const value = incoming.searchParams.get(name)
+          if (value !== null && pattern.test(value)) params.set(name, value)
+        }
+
         for (const [name, value] of Object.entries(route.pinned)) {
           params.set(name, value)
         }
 
         if (token) params.set('apiToken', token)
 
-        return `${route.path}?${params.toString()}`
+        // The upstream path, which is not always ours: the emblem endpoint
+        // is /api/GuildIcon there and /api/guild-icon here.
+        return `${route.upstream ?? route.path}?${params.toString()}`
       },
     }
   }

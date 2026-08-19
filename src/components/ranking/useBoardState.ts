@@ -6,6 +6,7 @@ import {
   type ClassFilterId,
 } from "../../data/ranking";
 
+
 export type BoardState = {
   board: BoardId;
   filter: ClassFilterId;
@@ -33,9 +34,17 @@ export const QUERY_MAX = 40;
 function readParams(search: string): BoardState {
   const params = new URLSearchParams(search);
 
-  const board = BOARDS.find((entry) => entry.id === params.get(KEY.board));
+  // Boards still waiting on an endpoint are not selectable, by URL either.
+  const board = BOARDS.find(
+    (entry) => entry.id === params.get(KEY.board) && !entry.soon,
+  );
+
+  // The filter has to be one this board's endpoint accepts: MMR refuses the
+  // heal category that League allows, and a stale value would only 400.
+  const allowed = board?.categories ?? BOARDS[0].categories ?? [];
   const filter = CLASS_FILTERS.find(
-    (entry) => entry.id === params.get(KEY.filter),
+    (entry) =>
+      entry.id === params.get(KEY.filter) && allowed.includes(entry.id),
   );
   const page = Number.parseInt(params.get(KEY.page) ?? "", 10);
 
