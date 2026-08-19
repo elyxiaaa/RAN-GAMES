@@ -1,14 +1,15 @@
 import { DownloadSimple } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import {
+  BRAND,
   FACTIONS,
   HERO_ART,
   HERO_COPY,
   HERO_MARK,
-  LIVE_STATS,
 } from "../data/content";
 import { useLiveCount } from "../hooks/useLiveCount";
 import { useScrolled } from "../hooks/useScrolled";
+import { useServerStats } from "../hooks/useServerStats";
 import { CyclingMark } from "./hero/CyclingMark";
 import { ParallaxLayer, ParallaxScene } from "./hero/parallax";
 import { Button } from "./ui/Button";
@@ -155,7 +156,7 @@ export function Hero() {
       >
         <img
           src={HERO_ART.character ?? ""}
-          alt="Ran Online Episode 3 key character, a campus fighter in a modified school uniform"
+          alt={`Ran Online ${BRAND.episodeName} key character, a campus fighter in a modified school uniform`}
           fetchPriority="high"
           decoding="async"
           className={`h-full w-full animate-idle-bob object-cover ${PLATE_POSITION} motion-reduce:animate-none`}
@@ -265,17 +266,26 @@ export function Hero() {
   );
 }
 
+/**
+ * Total characters created, overall and per school, read live from the game
+ * server. The figures start at the snapshot baked into src/data/stats.ts and
+ * are replaced in place once the fetch lands, so nothing here can shift layout.
+ */
 function HeroReadout() {
-  const online = LIVE_STATS[0];
+  const stats = useServerStats();
 
   return (
     <dl className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-5 border-t border-white/10 pt-6 sm:gap-x-10">
-      <ReadoutItem label="Players online" value={online.value} accent drift />
+      <ReadoutItem
+        label="Total characters"
+        value={stats.totalCharacters}
+        accent
+      />
       {FACTIONS.map((faction) => (
         <ReadoutItem
           key={faction.id}
           label={faction.name}
-          value={faction.value}
+          value={stats.charactersBySchool[faction.code]}
           crest={faction.crest}
         />
       ))}
@@ -288,15 +298,15 @@ function ReadoutItem({
   value,
   crest,
   accent = false,
-  drift = false,
 }: {
   label: string;
   value: number;
   crest?: string;
   accent?: boolean;
-  drift?: boolean;
 }) {
-  const ref = useLiveCount<HTMLElement>(value, drift);
+  // Drift off: these are real counts now, and a number that wanders on its own
+  // would contradict the server the moment anyone compared two of them.
+  const ref = useLiveCount<HTMLElement>(value, false);
 
   return (
     <div className="flex items-center gap-2.5">

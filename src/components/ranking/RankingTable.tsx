@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Coins } from "@phosphor-icons/react";
 import {
+  CAP_LEVEL,
   CLASSES,
   SCHOOLS,
   formatGold,
@@ -100,7 +101,9 @@ function Folded({ until, children }: { until: From; children: ReactNode }) {
 function Level({ level }: { level: number }) {
   return (
     <span
-      className={`stat-num text-[15px] ${level === 135 ? "text-blush" : "text-rose"}`}
+      className={`stat-num text-[15px] ${
+        level === CAP_LEVEL ? "text-blush" : "text-rose"
+      }`}
     >
       {level}
     </span>

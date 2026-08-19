@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local environment, including the stats API token.
+.env
+.env.*
+!.env.example

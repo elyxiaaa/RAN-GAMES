@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Play } from "@phosphor-icons/react";
-import { LINKS, MEDIA, SHOWCASE } from "../data/content";
+import { BRAND, LINKS, MEDIA, SHOWCASE } from "../data/content";
 import { Reveal } from "./ui/Reveal";
 import { SectionHeading } from "./ui/SectionHeading";
 
@@ -31,7 +31,7 @@ export function Trailer() {
             {playing && videoId ? (
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`}
-                title="Ran Online E-games Episode 3 trailer"
+                title={`Ran Online E-games ${BRAND.episodeName} trailer`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 className="absolute inset-0 h-full w-full"
@@ -40,7 +40,7 @@ export function Trailer() {
               <>
                 <img
                   src={MEDIA.trailerPoster}
-                  alt="Still frame from the Episode 3 trailer"
+                  alt={`Still frame from the ${BRAND.episodeName} trailer`}
                   loading="lazy"
                   decoding="async"
                   className="duotone absolute inset-0 h-full w-full object-cover opacity-70"
@@ -55,11 +55,11 @@ export function Trailer() {
                     type="button"
                     onClick={() => setPlaying(true)}
                     className="group absolute inset-0 flex flex-col items-center justify-center gap-5"
-                    aria-label="Play the Episode 3 trailer"
+                    aria-label={`Play the ${BRAND.episodeName} trailer`}
                   >
                     <PlayMark />
                     <span className="label text-[11px] text-blush">
-                      Episode 3 trailer
+                      {BRAND.episodeName} trailer
                     </span>
                   </button>
                 ) : (
@@ -68,11 +68,11 @@ export function Trailer() {
                     target="_blank"
                     rel="noreferrer"
                     className="group absolute inset-0 flex flex-col items-center justify-center gap-5"
-                    aria-label="Open the Episode 3 trailer"
+                    aria-label={`Open the ${BRAND.episodeName} trailer`}
                   >
                     <PlayMark />
                     <span className="label text-[11px] text-blush">
-                      Episode 3 trailer
+                      {BRAND.episodeName} trailer
                     </span>
                   </a>
                 )}

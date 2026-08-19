@@ -1,13 +1,16 @@
 export const BRAND = {
   name: "RAN ONLINE",
   suffix: "E-GAMES",
-  episode: "EPISODE 3",
+  /** Display form, for the uppercase hero mark. */
+  episode: "EPISODE 6",
+  /** Prose form, for alt text, media titles and anything read aloud. */
+  episodeName: "Episode 6",
   logoSrc: "/images/main-logo.webp" as string | null,
 };
 
 export const LINKS = {
-  facebook: "https://www.facebook.com/",
-  discord: "https://discord.gg/",
+  facebook: "https://www.facebook.com/RanOnlineEGamesOfficial",
+  discord: "https://discord.gg/QJJhF7Mfw",
   client: "#download",
   mirror1: "#download",
   mirror2: "#download",
@@ -29,8 +32,8 @@ export const HERO_ART = {
 };
 
 export const HERO_MARK = {
-  cycle: ["RAN ONLINE", "EPISODE 3"],
-  spoken: "Ran Online E-games. Episode 3 is live.",
+  cycle: ["RAN ONLINE", BRAND.episode],
+  spoken: `Ran Online E-games. ${BRAND.episodeName} is live.`,
 };
 
 export const HERO_COPY = {
@@ -38,26 +41,31 @@ export const HERO_COPY = {
   tagline: "Pure hunt. Player run economy. Zero pay to win.",
 };
 
+/**
+ * The three schools. `code` is the key the game server uses for them, so the
+ * hero readout can line a live count up with the right crest. The counts live
+ * in src/data/stats.ts, never here: this file is copy and art.
+ */
 export const FACTIONS = [
   {
     id: "sacred-gate",
     name: "Sacred Gate",
-    value: 69000,
+    code: "SG",
     crest: "/images/SG.webp",
   },
   {
     id: "mystic-peak",
     name: "Mystic Peak",
-    value: 67000,
+    code: "MP",
     crest: "/images/MP.webp",
   },
   {
     id: "phoenix",
     name: "Phoenix",
-    value: 69000,
+    code: "PHX",
     crest: "/images/PHNX.webp",
   },
-];
+] as const;
 
 export const LIVE_STATS = [
   { id: "online", label: "Players online", value: 12847, format: "int" },
@@ -93,22 +101,32 @@ export const SHOWCASE = [
   },
 ];
 
-export const SERVER_STATS = [
-  { id: "max-level", value: "135", label: "Max Level" },
-  { id: "last-skill", value: "Lv 127", label: "Last Skill" },
-  { id: "exp-rate", value: "Low", label: "EXP Rate" },
+/**
+ * The headline configuration. `phrase` marks a value that reads as words rather
+ * than a figure, so the tile drops to a size the words actually fit in.
+ */
+export const SERVER_STATS: {
+  id: string;
+  value: string;
+  label: string;
+  phrase?: true;
+}[] = [
+  { id: "cap-level", value: "210", label: "Cap Level" },
+  { id: "last-skill", value: "Lv 167", label: "Last Skill" },
+  { id: "exp-rate", value: "Mid to high", label: "EXP Rate", phrase: true },
   { id: "drop-rate", value: "Low", label: "Drop Rate" },
+  { id: "channels", value: "Channel 0 only", label: "Channels", phrase: true },
 ];
 
 export const SERVER_DETAILS = [
-  { label: "Episode", value: "Episode 3 (Classic)" },
-  { label: "Gameplay", value: "Party Leveling" },
-  { label: "Skill Type", value: "Sphere / Quest Based" },
-  { label: "Map Type", value: "Quest Based" },
-  { label: "Last Set", value: "Dynamic and Enhanced Series" },
-  { label: "Last Weapon", value: "Dragon Sword Series" },
-  { label: "Last Map", value: "Hangout 3F, B3" },
-  { label: "Platform", value: "PC (Windows)" },
+  { label: "Episode", value: BRAND.episodeName },
+  { label: "Gameplay", value: "Sync gaming" },
+  { label: "Skill Type", value: "Open skill, no scroll needed" },
+  { label: "Map Type", value: "Open map" },
+  { label: "Last Set", value: "195 C Set series" },
+  { label: "Last Weapon", value: "Level 160 weapon series" },
+  { label: "Last Map", value: "Director's Room and Head B Underground" },
+  { label: "Platform", value: "Desktop, laptop and mobile via GameHub" },
 ];
 
 export type Realm = {
@@ -120,55 +138,46 @@ export type Realm = {
   specs: { label: string; value: string }[];
 };
 
+/**
+ * One channel, and there is no second one planned. The array shape stays because
+ * the schema graph, llms.txt and the section layout all read from it, and each
+ * copes with any number of entries.
+ */
 export const REALMS: Realm[] = [
   {
-    id: "strife",
-    name: "Strife",
+    id: "channel-0",
+    name: "Channel 0",
     status: "live",
     statusLabel: "Live now",
-    blurb:
-      "The flagship realm. Full Episode 3 content, all six classes unlocked, sieges every Saturday.",
+    blurb: `The only channel. Full ${BRAND.episodeName} content, all six classes unlocked, sieges every Saturday.`,
     specs: [
       { label: "Region", value: "Singapore" },
       { label: "Client", value: "3.0.4" },
-      { label: "Rate tier", value: "Classic" },
-      { label: "Max level", value: "135" },
+      { label: "Rate tier", value: "Mid to high" },
+      { label: "Cap level", value: "210" },
       { label: "Avg ping", value: "38 ms" },
       { label: "Uptime, 30 days", value: "99.6%" },
     ],
   },
-  {
-    id: "fury",
-    name: "Fury",
-    status: "scheduled",
-    statusLabel: "Opens soon",
-    blurb:
-      "Classic rate realm for players who want the long climb. Fresh economy, no transfers in.",
-    specs: [
-      { label: "Region", value: "Singapore" },
-      { label: "Rate tier", value: "Mid" },
-      { label: "Max level", value: "150" },
-      { label: "Transfers", value: "Closed" },
-    ],
-  },
 ];
 
-export const SERVER_FEATURES = [
-  {
-    id: "rates",
-    heading: "Rates",
-    kind: "numbers" as const,
-    items: [
-      { label: "Base EXP", value: "x5" },
-      { label: "Job EXP", value: "x5" },
-      { label: "Item drop", value: "x3" },
-      { label: "Gold drop", value: "x3" },
-    ],
-  },
+/**
+ * `numbers` renders a row of large figures, `list` renders labelled paragraphs.
+ * Rates used to be the one `numbers` cluster; they now live in SERVER_STATS, and
+ * the renderer keeps both kinds so a future cluster can use either.
+ */
+export type FeatureCluster = {
+  id: string;
+  heading: string;
+  kind: "numbers" | "list";
+  items: { label: string; value: string }[];
+};
+
+export const SERVER_FEATURES: FeatureCluster[] = [
   {
     id: "systems",
     heading: "Live systems",
-    kind: "list" as const,
+    kind: "list",
     items: [
       {
         label: "Special PK",
@@ -194,7 +203,7 @@ export const SERVER_FEATURES = [
   {
     id: "policy",
     heading: "House rules",
-    kind: "list" as const,
+    kind: "list",
     items: [
       {
         label: "No pay to win",

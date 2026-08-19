@@ -22,17 +22,17 @@ export const SITE = {
   locale: "en_US",
   themeColor: "#0A0707",
 
-  title: "Ran Online E-games | Episode 3 Server, Free PC MMORPG",
+  title: "Ran Online E-games | Episode 6 Server, Free PC MMORPG",
 
   description:
-    "Ran Online E-games runs Episode 3 on Strife. Pure hunt progression, a player run economy, campus factions and zero pay to win. Free client for Windows PC.",
+    "Ran Online E-games runs Episode 6 on one channel: cap level 210, open skills, open maps and zero pay to win. Free client for Windows PC, or play on mobile through GameHub.",
 
   ogImage: "/images/legend-status.webp",
   ogImageType: "image/webp",
   ogImageWidth: 1920,
   ogImageHeight: 1080,
   ogImageAlt:
-    "Ran Online Episode 3, campus fighters massed on the field after dark",
+    "Ran Online Episode 6, campus fighters massed on the field after dark",
 
   twitterSite: "",
 
@@ -64,7 +64,7 @@ export const PAGES: Record<
     name: "Rankings",
     title: "Rankings | Ran Online E-games League, Gold, Guild and PK Map",
     description:
-      "Live Ran Online E-games rankings on Strife. League standings by class, top gold, guild power and the PK map kill boards, rebuilt every 10 minutes.",
+      "Live Ran Online E-games rankings on Channel 0. League standings by class, top gold, guild power and the PK map kill boards, rebuilt every 10 minutes.",
   },
 };
 
@@ -210,7 +210,9 @@ export function buildStructuredData(path = "/"): Record<string, unknown> {
       image: { "@id": ID.image },
       inLanguage: SITE.lang,
       genre: ["MMORPG", "Action RPG", "Campus MMO"],
-      gamePlatform: ["PC", "Microsoft Windows"],
+      // Mobile is played through GameHub, so the platform list carries it while
+      // operatingSystem stays the Windows requirement of the downloadable client.
+      gamePlatform: ["PC", "Microsoft Windows", "Mobile"],
       playMode: "MultiPlayer",
       applicationCategory: "GameApplication",
       operatingSystem: specValue("OS") ?? DOWNLOAD_META.requirement,
@@ -476,7 +478,7 @@ export function buildLlmsTxt(): string {
     push("");
   }
 
-  push("## Realms", "");
+  push("## Channel", "");
   for (const realm of REALMS) {
     push(`### ${realm.name} (${realm.statusLabel})`, "", realm.blurb, "");
     for (const spec of realm.specs) push(`- ${spec.label}: ${spec.value}`);

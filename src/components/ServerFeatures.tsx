@@ -11,7 +11,7 @@ export function ServerFeatures() {
       <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-10">
         <SectionHeading
           title="Server features"
-          lead="The full configuration, published up front. Nothing here changes without a notice on Discord first."
+          lead="What runs on a schedule, and the rules that never move. Rates and caps sit further up under server information."
         />
 
         <div className="flex flex-col gap-14">

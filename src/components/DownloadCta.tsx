@@ -53,7 +53,7 @@ export function DownloadCta() {
             Play tonight
           </h2>
           <p className="mx-auto mt-6 max-w-[48ch] text-[16px] leading-relaxed text-rose">
-            Character creation is open on Strife. Download the client, pick
+            Character creation is open on Channel 0. Download the client, pick
             your school, and be on the field before the next siege.
           </p>
         </Reveal>

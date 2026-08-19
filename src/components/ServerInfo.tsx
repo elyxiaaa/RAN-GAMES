@@ -12,7 +12,11 @@ import { Reveal } from "./ui/Reveal";
 import { SectionHeading } from "./ui/SectionHeading";
 
 export function ServerInfo() {
-  const [flagship, upcoming] = REALMS;
+  // There is one channel today. Reading the rest off the end of the array keeps
+  // the section working if a second one is ever added, rather than crashing on a
+  // realm that is not there.
+  const [flagship, ...rest] = REALMS;
+  const alone = rest.length === 0;
 
   return (
     <section
@@ -22,18 +26,25 @@ export function ServerInfo() {
       <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-10">
         <SectionHeading
           title="Server information"
-          lead="One region, one client, no shard hopping. The headline numbers below are Strife, the realm that is live right now."
+          lead="One region, one client, one channel. Everybody plays in the same place, so the numbers below are the whole server and not a slice of it."
         />
 
         <Reveal>
-          <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {SERVER_STATS.map((stat) => (
               <div
                 key={stat.id}
                 className="notch-sm flex flex-col-reverse gap-2.5 border border-burgundy-900 bg-ink p-5 sm:p-6"
               >
                 <dt className="label text-[10px] text-rose">{stat.label}</dt>
-                <dd className="stat-num text-[36px] leading-none sm:text-[44px]">
+                {/* Figures shout, phrases speak. Both sit on the same baseline. */}
+                <dd
+                  className={`stat-num leading-none ${
+                    stat.phrase
+                      ? "text-[22px] sm:text-[25px]"
+                      : "text-[36px] sm:text-[42px]"
+                  }`}
+                >
                   {stat.value}
                 </dd>
               </div>
@@ -42,12 +53,14 @@ export function ServerInfo() {
         </Reveal>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-12">
-          <Reveal className="lg:col-span-7">
-            <RealmTile realm={flagship} featured />
+          <Reveal className={alone ? "lg:col-span-12" : "lg:col-span-7"}>
+            <RealmTile realm={flagship} featured wide={alone} />
           </Reveal>
-          <Reveal index={1} className="lg:col-span-5">
-            <RealmTile realm={upcoming} />
-          </Reveal>
+          {rest.map((realm, index) => (
+            <Reveal key={realm.id} index={index + 1} className="lg:col-span-5">
+              <RealmTile realm={realm} />
+            </Reveal>
+          ))}
         </div>
 
         <Reveal className="mt-14 border-t border-burgundy-900 pt-12">
@@ -68,7 +81,16 @@ export function ServerInfo() {
   );
 }
 
-function RealmTile({ realm, featured = false }: { realm: Realm; featured?: boolean }) {
+function RealmTile({
+  realm,
+  featured = false,
+  wide = false,
+}: {
+  realm: Realm;
+  featured?: boolean;
+  /** Set when the tile owns the full row, so six specs fit on one line. */
+  wide?: boolean;
+}) {
   const live = realm.status === "live";
 
   return (
@@ -89,7 +111,11 @@ function RealmTile({ realm, featured = false }: { realm: Realm; featured?: boole
 
       <h3
         className={`display mt-5 ${
-          featured ? "text-[52px] sm:text-[68px]" : "text-[42px] sm:text-[52px]"
+          featured
+            ? wide
+              ? "text-[56px] sm:text-[76px] lg:text-[88px]"
+              : "text-[52px] sm:text-[68px]"
+            : "text-[42px] sm:text-[52px]"
         } ${live ? "text-blush" : "text-rose"}`}
       >
         {realm.name}
@@ -101,7 +127,11 @@ function RealmTile({ realm, featured = false }: { realm: Realm; featured?: boole
 
       <dl
         className={`mt-7 grid gap-x-6 gap-y-5 border-t border-burgundy-900 pt-6 ${
-          featured ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"
+          featured
+            ? wide
+              ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
+              : "grid-cols-2 sm:grid-cols-3"
+            : "grid-cols-2"
         }`}
       >
         {realm.specs.map((spec) => (

@@ -14,6 +14,18 @@
  * `Date.now`, so the prerendered markup and the hydrated markup agree.
  */
 
+import { SERVER_STATS } from "./content.ts";
+
+/**
+ * Cap level, read from the server configuration rather than repeated, so the
+ * boards can never disagree with the figure in the server information rail.
+ */
+export const CAP_LEVEL =
+  Number.parseInt(
+    SERVER_STATS.find((stat) => stat.id === "cap-level")?.value ?? "",
+    10,
+  ) || 210;
+
 export type BoardId = "league" | "gold" | "guild" | "pk";
 
 export type ClassId = "brawler" | "swordsman" | "archer" | "shaman";
@@ -34,7 +46,7 @@ export type GuildTier = "S" | "A" | "B" | "C" | "D" | "E";
 export const PAGE_SIZE = 10;
 
 export const RANKING_META = {
-  realm: "Strife",
+  realm: "Channel 0",
   season: "Season 1",
   /** Cadence the snapshot job runs at. Copy only, safe to reword. */
   interval: "10 minutes",
@@ -211,7 +223,10 @@ function fighters(key: string, filter: ClassFilterId): PlayerRow[] {
   return handles.map((name, index) => ({
     rank: index + 1,
     name,
-    level: index < 34 || random.chance(0.5) ? 135 : random.int(128, 134),
+    level:
+      index < 34 || random.chance(0.5)
+        ? CAP_LEVEL
+        : random.int(CAP_LEVEL - 7, CAP_LEVEL - 1),
     classId: fixed ?? random.pick(CLASS_IDS),
     school: random.pick(SCHOOL_IDS),
     guild: random.chance(0.82)

@@ -3,9 +3,11 @@
 Landing page for the Ran Online E-games Windows PC client. React 19 + Vite +
 Tailwind v3 + Motion.
 
-The game is a desktop title. Every spec figure, performance band and download
-path on the page is Windows; there is no mobile build. The *site* is still
-fully responsive, because visitors browse it on phones.
+The downloadable client is Windows only, and every spec figure, performance band
+and download path on the page describes it. Mobile play goes through GameHub
+instead, which the site names under Server details but does not yet document —
+there is no GameHub install path, requirement or link anywhere on the page. The
+*site* is fully responsive regardless, because visitors browse it on phones.
 
 ```bash
 npm run dev      # dev server
@@ -232,10 +234,21 @@ Spare captures sitting unused in `public/images/`: `hangout1f`, `hangout2f`,
 
 ### 4. Mock data
 
-Everything in [src/data/content.ts](src/data/content.ts) is placeholder,
-including realm names, rates, ping figures, tier benchmarks and player counts.
-`LINKS` currently points at bare `facebook.com` and `discord.gg` roots, and
-`client`, `mirror` and `launcher` are all anchors to `#download`.
+The server configuration in [src/data/content.ts](src/data/content.ts) is real:
+`SERVER_STATS`, `SERVER_DETAILS` and the Facebook and Discord links in `LINKS`
+are the live Episode 6 values. What is still placeholder:
+
+- **Download links.** `client`, `mirror1` and `mirror2` in `LINKS` are all
+  anchors to `#download`, so every download button currently scrolls instead of
+  downloading. `DOWNLOAD_META` still carries the old `3.0.4` / `6.4 GB` figures.
+- **Channel figures.** Region, client version, ping and uptime under `REALMS`.
+  There is one channel, `channel-0`, and no second one planned.
+- **Player counts.** `LIVE_STATS`, animated by `useLiveCount`.
+- **Trailer.** `LINKS.trailer` is a placeholder YouTube URL.
+
+`BRAND.episode` and `BRAND.episodeName` are the only places the episode number
+is written. Alt text, media titles and the hero mark all read from them, so
+bumping to Episode 7 is a two-line change.
 
 The hardware figures are plausible placeholders, not measurements. `TIERS` are
 1440p bands, `MIN_SPECS` holds the Minimum / Recommended / Network columns, and
@@ -416,6 +429,43 @@ HTTPS.
 Unknown paths get Cloudflare's default 404. Adding `public/404.html` would
 replace it with a branded page; nothing else in the build needs to change.
 
+## Live server stats
+
+The hero readout shows total characters created, overall and per school, read
+from the game server rather than from a data file.
+
+**The game server speaks plain HTTP only.** A page served over HTTPS cannot call
+an `http://` endpoint at all: the browser blocks it as mixed content, before any
+code of ours runs, and there is no error a fetch can recover from. So the
+browser never calls the game server. It calls this site's own origin at
+`/api/stats`, and two interchangeable pieces of plumbing answer it:
+
+| Environment | Answered by |
+| --- | --- |
+| Cloudflare Pages | [functions/api/stats.ts](functions/api/stats.ts) |
+| `npm run dev`, `npm run preview` | the `/api/stats` proxy in [vite.config.ts](vite.config.ts) |
+
+Both read the same two variables and both attach the token server-side, so it
+never reaches the client bundle:
+
+| Variable | Meaning |
+| --- | --- |
+| `STATS_API_URL` | Upstream endpoint, default `http://egames.ran-services.com/api/stats` |
+| `STATS_API_TOKEN` | Appended as the `apiToken` query parameter |
+
+Locally they live in `.env.local`, which is gitignored; copy
+[.env.example](.env.example) to start. On Cloudflare they are set under Settings
+→ Environment variables. **Do not rename them with a `VITE_` prefix**, which
+would inline the token into public JavaScript.
+
+Nothing fetches during the prerender. The shipped HTML carries the `SNAPSHOT`
+figures in [src/data/stats.ts](src/data/stats.ts), and
+[useServerStats](src/hooks/useServerStats.ts) replaces them after mount, then
+once a minute while the tab is visible. A failed poll is silent by design: the
+readout keeps the numbers already on screen, so an outage upstream costs freshness
+and never shows a broken hero. Refresh `SNAPSHOT` if it ever drifts far enough
+from reality to read as wrong to a crawler.
+
 Nothing in the tree touches the DOM during render — every `window` and
 `document` access already sits inside a `useEffect` — which is what makes this
 work without an SSR-safety refactor. Two consequences worth knowing:
@@ -457,6 +507,7 @@ one deploy setting:
 | Domain, title, description, share card, schema | [src/data/seo.ts](src/data/seo.ts) |
 | Brand, links, realms, rates, specs, copy | [src/data/content.ts](src/data/content.ts) |
 | Ranking rows, until the API is wired | [src/data/ranking.ts](src/data/ranking.ts) |
+| Stats snapshot and upstream, per server | [src/data/stats.ts](src/data/stats.ts), `STATS_API_URL` |
 | Colour tokens, if the new server is not crimson | [tailwind.config.js](tailwind.config.js) |
 | Art, video, logo, favicon | `public/` and `src/assets/` |
 | Package name | [package.json](package.json) |
