@@ -442,8 +442,13 @@ browser never calls the game server. It calls this site's own origin at
 
 | Environment | Answered by |
 | --- | --- |
-| Cloudflare Pages | [functions/api/stats.ts](functions/api/stats.ts) |
+| Cloudflare Pages | [functions/api/stats.ts](functions/api/stats.ts), over [server/proxy.ts](server/proxy.ts) |
 | `npm run dev`, `npm run preview` | the `/api/stats` proxy in [vite.config.ts](vite.config.ts) |
+
+The Vite proxy is a stand-in for local work only. It forwards straight
+upstream and does no caching, so `x-cache` never appears there. To exercise the
+real Function, put the same two variables in `.dev.vars` and run
+`npx wrangler pages dev dist` against a build.
 
 Both read the same two variables and both attach the token server-side, so it
 never reaches the client bundle:
@@ -457,6 +462,39 @@ Locally they live in `.env.local`, which is gitignored; copy
 [.env.example](.env.example) to start. On Cloudflare they are set under Settings
 → Environment variables. **Do not rename them with a `VITE_` prefix**, which
 would inline the token into public JavaScript.
+
+### Caching, and why it is not just a header
+
+**Cloudflare does not cache a response a Function builds itself.** Setting
+`s-maxage` on one does nothing at the edge; only the browser ever reads it.
+Caching a generated response takes an explicit `caches.default` put, which is
+what [server/proxy.ts](server/proxy.ts) does. Without it every visitor poll
+would land on the game database: at a 60 second interval, 1,000 concurrent
+viewers is a sustained 17 requests per second against your server. With it,
+they collapse into one upstream call per TTL per datacenter.
+
+Responses carry `x-cache: HIT` or `MISS`, so this is verifiable from a terminal:
+
+```
+curl -sI https://ranonline-egames.com/api/stats | grep -i x-cache
+```
+
+Two properties worth preserving if you edit that file:
+
+- **The cache key is the public path, never the upstream URL.** The upstream
+  URL carries the token, and a token in a cache key is a token in shared
+  storage.
+- **Query parameters are an allowlist** (`forward`), not a passthrough. Anything
+  unnamed is dropped before it reaches the upstream or the key, so nobody can
+  cache-bust the endpoint into a load generator with `?x=1`, `?x=2`, `?x=3`.
+
+Failures are returned `no-store` and never cached, so one bad minute upstream
+cannot outlive the outage.
+
+**The cache is not a rate limiter.** It flattens honest traffic; it does not
+stop someone deliberately hammering the endpoint across datacenters. That is a
+Rate Limiting rule in the dashboard, matching `path contains "/api/"`, which also
+covers anything added under `/api/` later.
 
 Nothing fetches during the prerender. The shipped HTML carries the `SNAPSHOT`
 figures in [src/data/stats.ts](src/data/stats.ts), and
