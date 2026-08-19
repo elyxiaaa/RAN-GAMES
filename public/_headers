@@ -1,13 +1,7 @@
-# Cloudflare response headers. Copied to the site root by the build.
-# Rules are additive: every matching block contributes its headers, so keep the
-# Cache-Control blocks from overlapping each other.
-# https://developers.cloudflare.com/pages/configuration/headers/
-
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
-# Vite fingerprints everything in /assets, so it can never go stale.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
@@ -17,14 +11,12 @@
 /videos/*
   Cache-Control: public, max-age=2592000
 
-# The two documents, revalidated so a deploy is picked up straight away.
 /
   Cache-Control: public, max-age=0, must-revalidate
 
 /ranking
   Cache-Control: public, max-age=0, must-revalidate
 
-# robots.txt, llms.txt and sitemap.xml, generated at build time.
 /*.txt
   Cache-Control: public, max-age=0, must-revalidate
 

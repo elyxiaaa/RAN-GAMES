@@ -10,13 +10,6 @@ import {
   buildSitemap,
 } from "../src/data/seo.ts";
 
-/**
- * Turns the HTML file being transformed into the route it serves, so each entry
- * gets its own title, canonical and structured data.
- *   /index.html   -> /
- *   /ranking.html -> /ranking
- *   /ranking      -> /ranking   (dev server request)
- */
 function routeOf(htmlPath: string): string {
   const route = htmlPath
     .replace(/\?.*$/, "")
@@ -74,9 +67,6 @@ export function seo(): Plugin {
     },
 
     configureServer(server) {
-      // Cloudflare serves ranking.html at the extension-less /ranking. The dev
-      // server has no such rule, so map the bare path onto the file here and
-      // keep both environments answering the same URL.
       const pages = SEO_ROUTES.map((route) => route.path).filter(
         (path) => path !== "/",
       );

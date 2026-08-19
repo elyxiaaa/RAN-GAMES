@@ -266,11 +266,6 @@ export function Hero() {
   );
 }
 
-/**
- * Total characters created, overall and per school, read live from the game
- * server. The figures start at the snapshot baked into src/data/stats.ts and
- * are replaced in place once the fetch lands, so nothing here can shift layout.
- */
 function HeroReadout() {
   const stats = useServerStats();
 
@@ -304,8 +299,6 @@ function ReadoutItem({
   crest?: string;
   accent?: boolean;
 }) {
-  // Drift off: these are real counts now, and a number that wanders on its own
-  // would contradict the server the moment anyone compared two of them.
   const ref = useLiveCount<HTMLElement>(value, false);
 
   return (

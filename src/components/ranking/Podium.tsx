@@ -19,24 +19,18 @@ import { ClassIcon, GuildTag, SchoolCrest } from "./marks";
 type Seat = {
   rank: number;
   name: string;
-  /** Short label under the name: class for players, roster size for guilds. */
   detail: string;
   detailIcon: ReactNode;
   levelLabel: string;
   school: SchoolId | null;
-  /** `undefined` means the board has no guild column at all. */
   guild?: string | null;
   score: ReactNode;
   scoreTitle?: string;
-  /** What the board ranks on, used to measure the gap to first place. */
   value: number;
-  /** Reads the headline number once, on the first seat only. */
   metricNote: string;
-  /** Singular and plural of the ranked unit, or null when it is gold. */
   unit: [string, string] | null;
 };
 
-/** The game's two toned number, sized for the podium. */
 function split(gain: number, loss: number) {
   return (
     <>
@@ -113,10 +107,6 @@ function seatOf(row: BoardRow, board: BoardId): Seat {
   };
 }
 
-/**
- * Second and third seats trade the metric label for their distance to first.
- * Repeating "Wins – Losses" three times across one row said nothing.
- */
 function noteFor(seat: Seat, leader: Seat): string {
   if (seat.rank === leader.rank) return seat.metricNote;
 
@@ -180,9 +170,6 @@ function PodiumCard({
           aria-hidden="true"
           loading="lazy"
           decoding="async"
-          // Cropped to the emblem: the crest art ends in a school wordmark,
-          // and the card's overflow cut it mid-word, which read as broken text
-          // rather than as a watermark.
           className={`pointer-events-none absolute -right-5 -top-5 select-none object-cover object-top ${
             lead ? "opacity-[0.16]" : "opacity-[0.09]"
           }`}

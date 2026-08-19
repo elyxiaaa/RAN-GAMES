@@ -1,19 +1,20 @@
 import {
-  ArrowsClockwise,
   CloudArrowDown,
   DiscordLogo,
   FacebookLogo,
   WindowsLogo,
 } from "@phosphor-icons/react";
-import { DOWNLOAD_META, LINKS, LIVE_STATS, MEDIA } from "../data/content";
+import { DOWNLOAD_META, LINKS, MEDIA } from "../data/content";
 import { useLiveCount } from "../hooks/useLiveCount";
+import { useServerStats } from "../hooks/useServerStats";
 import { Button } from "./ui/Button";
 import { LiveBadge } from "./ui/LiveBadge";
 import { Reveal } from "./ui/Reveal";
 
 export function DownloadCta() {
-  const online = LIVE_STATS[0];
-  const countRef = useLiveCount(online.value);
+  const stats = useServerStats();
+
+  const countRef = useLiveCount(stats.totalOnline, false);
 
   return (
     <section
@@ -42,9 +43,9 @@ export function DownloadCta() {
           <LiveBadge label="Servers up" />
           <span className="text-[13px] text-rose">
             <span ref={countRef} className="stat-num text-[15px]">
-              {online.value.toLocaleString("en-US")}
+              {stats.totalOnline.toLocaleString("en-US")}
             </span>{" "}
-            players online right now
+            {stats.totalOnline === 1 ? "player" : "players"} online right now
           </span>
         </Reveal>
 
@@ -65,6 +66,8 @@ export function DownloadCta() {
           <Button
             as="a"
             href={LINKS.client}
+            target="_blank"
+            rel="noreferrer"
             size="lg"
             icon={<WindowsLogo size={20} weight="fill" />}
             className="w-full sm:w-auto"
@@ -73,23 +76,15 @@ export function DownloadCta() {
           </Button>
           <Button
             as="a"
-            href={LINKS.mirror1}
+            href={LINKS.mirror}
+            target="_blank"
+            rel="noreferrer"
             variant="ghost"
             size="lg"
             icon={<CloudArrowDown size={19} weight="bold" />}
             className="w-full sm:w-auto"
           >
-            Mirror 1
-          </Button>
-          <Button
-            as="a"
-            href={LINKS.mirror2}
-            variant="ghost"
-            size="lg"
-            icon={<ArrowsClockwise size={19} weight="bold" />}
-            className="w-full sm:w-auto"
-          >
-            Mirror 2
+            MediaFire mirror
           </Button>
         </Reveal>
 

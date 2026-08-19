@@ -15,7 +15,6 @@ import {
   type MmrRow,
 } from "../../data/ranking";
 import {
-  BadgeMark,
   ClassMark,
   GuildLevelMark,
   GuildTag,
@@ -26,16 +25,13 @@ import {
 
 type Align = "left" | "center" | "right";
 
-/** The breakpoint a column appears at. Below it, the value folds into the name cell. */
 type From = "sm" | "md" | "lg";
 
 type Cell<T> = {
   label: string;
   align?: Align;
   from?: From;
-  /** Expanded wording for a shortened header, surfaced on hover and to AT. */
   hint?: string;
-  /** True for the one cell that names the row, rendered as a `th`. */
   rowHeader?: boolean;
   render: (row: T) => ReactNode;
 };
@@ -46,7 +42,6 @@ const ALIGN: Record<Align, string> = {
   right: "text-right",
 };
 
-/** Columns hide downwards, so each breakpoint shows one more slice of the row. */
 const VISIBLE: Record<From, string> = {
   sm: "hidden sm:table-cell",
   md: "hidden md:table-cell",
@@ -56,14 +51,6 @@ const VISIBLE: Record<From, string> = {
 const PAD =
   "px-2 py-3.5 align-middle first:pl-3 last:pr-3 sm:px-3 sm:first:pl-5 sm:last:pr-5";
 
-/* -------------------------------------------------------------------------- */
-/* Shared cell pieces                                                         */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Row name plus the values whose own column is still hidden at this width.
- * Every board is fully expanded by `lg`, which is where the fold disappears.
- */
 function Name({
   name,
   rank,
@@ -93,7 +80,6 @@ function Name({
   );
 }
 
-/** One folded value. `until` matches its column's breakpoint, so they swap cleanly. */
 function Folded({ until, children }: { until: From; children: ReactNode }) {
   const hide = { sm: "sm:hidden", md: "md:hidden", lg: "lg:hidden" }[until];
   return <span className={hide}>{children}</span>;
@@ -136,11 +122,6 @@ function Centred({ children }: { children: ReactNode }) {
   return <span className="flex justify-center">{children}</span>;
 }
 
-/* -------------------------------------------------------------------------- */
-/* Column definitions                                                        */
-/* -------------------------------------------------------------------------- */
-
-/** Rank, name, level, class, school: the opening of every player board. */
 function playerCells<T extends LeagueRow | MmrRow | GoldRow>(
   fold: (row: T) => ReactNode,
 ): Cell<T>[] {
@@ -299,21 +280,6 @@ const CELLS: {
       ),
     },
     {
-      label: "Badge",
-      align: "center",
-      from: "lg",
-      render: (row) => (
-        <Centred>
-          <BadgeMark
-            badge={row.badge}
-            level={row.level}
-            guNum={row.guNum}
-            guild={row.guild}
-          />
-        </Centred>
-      ),
-    },
-    {
       label: "Alliance",
       align: "center",
       from: "lg",
@@ -345,7 +311,6 @@ const CELLS: {
       align: "right",
       render: (row) => (
         <>
-          {/* Until the Lost column arrives at md, this carries both numbers. */}
           <span className="md:hidden">
             <ScoreSplit
               gain={row.wins}
@@ -393,10 +358,6 @@ function OnlineShare({ online, members }: { online: number; members: number }) {
     </span>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Table                                                                     */
-/* -------------------------------------------------------------------------- */
 
 export function RankingTable({ board, rows }: { board: BoardId; rows: BoardRow[] }) {
   if (board === "gold") {

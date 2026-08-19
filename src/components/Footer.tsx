@@ -7,7 +7,6 @@ const COLUMNS = [
   {
     heading: "Game",
     links: [
-      { label: "Live footage", href: "#footage" },
       { label: "Features", href: "#features" },
       { label: "Compatibility", href: "#compatibility" },
       { label: "Download", href: "#download" },

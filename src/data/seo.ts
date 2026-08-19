@@ -47,10 +47,6 @@ export const SITE = {
   },
 } as const;
 
-/**
- * Per page head copy. Every route that ships its own HTML file needs an entry
- * here, or it inherits the home page title and canonical.
- */
 export const PAGES: Record<
   string,
   { name: string; title: string; description: string }
@@ -126,7 +122,6 @@ const ID = {
   image: `${ORIGIN}/#primaryimage`,
 };
 
-/** Canonical URL for a route. Only the home page carries a trailing slash. */
 export function canonical(path: string): string {
   return path === "/" ? `${ORIGIN}/` : `${ORIGIN}${path}`;
 }
@@ -210,8 +205,6 @@ export function buildStructuredData(path = "/"): Record<string, unknown> {
       image: { "@id": ID.image },
       inLanguage: SITE.lang,
       genre: ["MMORPG", "Action RPG", "Campus MMO"],
-      // Mobile is played through GameHub, so the platform list carries it while
-      // operatingSystem stays the Windows requirement of the downloadable client.
       gamePlatform: ["PC", "Microsoft Windows", "Mobile"],
       playMode: "MultiPlayer",
       applicationCategory: "GameApplication",

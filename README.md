@@ -456,7 +456,6 @@ so what is pinned, forwarded and refused cannot drift between them:
 | Top MMR | `/api/ranking/mmr` | `category`: the same **minus `heal`** | 300s |
 | Top Gold | `/api/ranking/currency` | nothing | 300s |
 | Top Guild | `/api/ranking/guild` | nothing | 300s |
-| Guild emblems | `/api/guild-icon` | `guNum`: 1-5 digits | 24h |
 
 Every board pins `page=1` and `pageSize=50`. Top Gold also pins `type=gold`, the
 only currency the server accepts today; its 400 mentions epoint and gpoint
@@ -466,80 +465,6 @@ only currency the server accepts today; its 400 mentions epoint and gpoint
 answers 200, so the filter rail is per board (`BOARDS[].categories`). A stale
 `?class=heal` in the URL falls back to `all` on MMR rather than requesting a
 category that can only fail.
-
-### Guild emblems
-
-Emblems are PNGs, not JSON, so `server/proxy.ts` passes bytes rather than text
-and keeps the upstream content type. Two guards go with that:
-
-- **Redirects are never followed** (`redirect: "manual"`). An endpoint behind a
-  login answers 3xx to a sign-in page; following it would turn an auth wall
-  into a 200 carrying HTML, and that HTML would be cached as the emblem.
-- **The content type must match `route.expect`** before anything is stored, because
-  a server can answer 200 with a login page just as easily as it can redirect
-  to one.
-
-`guNum` has no fixed list, so it is validated by shape (`match`) rather than by an
-enum: digits only, at most five. That bound is the cache's protection --
-without it a caller could mint unlimited entries by counting upwards.
-
-**This endpoint does not work yet.** Upstream it is `/api/GuildIcon`, and unlike
-every other route it ignores `apiToken` and redirects anonymous callers to
-`/Identity/Account/Login`. The proxy refuses that with a 502 and the guild board
-falls back to its generic mark, so nothing is broken while it waits. It will
-start working with no change here once the game server accepts the API token
-on that action.
-
-The Vite proxy is a stand-in for local work only. It forwards straight
-upstream and does no caching, so `x-cache` never appears there. To exercise the
-real Function, put the same two variables in `.dev.vars` and run
-`npx wrangler pages dev dist` against a build.
-
-Both read the same two variables and both attach the token server-side, so it
-never reaches the client bundle:
-
-| Variable | Meaning |
-| --- | --- |
-| `GAME_API_ORIGIN` | Origin only, default `http://egames.ran-services.com`. Paths live in server/routes.ts |
-| `STATS_API_TOKEN` | Appended as the `apiToken` query parameter |
-
-Locally they live in `.env.local`, which is gitignored; copy
-[.env.example](.env.example) to start. On Cloudflare they are set under Settings
-→ Environment variables. **Do not rename them with a `VITE_` prefix**, which
-would inline the token into public JavaScript.
-
-### Caching, and why it is not just a header
-
-**Cloudflare does not cache a response a Function builds itself.** Setting
-`s-maxage` on one does nothing at the edge; only the browser ever reads it.
-Caching a generated response takes an explicit `caches.default` put, which is
-what [server/proxy.ts](server/proxy.ts) does. Without it every visitor poll
-would land on the game database: at a 60 second interval, 1,000 concurrent
-viewers is a sustained 17 requests per second against your server. With it,
-they collapse into one upstream call per TTL per datacenter.
-
-Responses carry `x-cache: HIT` or `MISS`, so this is verifiable from a terminal:
-
-```
-curl -sI https://ranonline-egames.com/api/stats | grep -i x-cache
-```
-
-Two properties worth preserving if you edit that file:
-
-- **The cache key is the public path, never the upstream URL.** The upstream
-  URL carries the token, and a token in a cache key is a token in shared
-  storage.
-- **Query parameters are an allowlist** (`forward`), not a passthrough. Anything
-  unnamed is dropped before it reaches the upstream or the key, so nobody can
-  cache-bust the endpoint into a load generator with `?x=1`, `?x=2`, `?x=3`.
-
-Failures are returned `no-store` and never cached, so one bad minute upstream
-cannot outlive the outage.
-
-**The cache is not a rate limiter.** It flattens honest traffic; it does not
-stop someone deliberately hammering the endpoint across datacenters. That is a
-Rate Limiting rule in the dashboard, matching `path contains "/api/"`, which also
-covers anything added under `/api/` later.
 
 ### The boards
 

@@ -6,18 +6,8 @@ import {
   type ServerStats,
 } from "../data/stats";
 
-/** Counts move slowly, so a minute is frequent enough to read as live. */
 const POLL_MS = 60_000;
 
-/**
- * Live server stats, starting from the baked-in snapshot.
- *
- * The first render always returns SNAPSHOT, which is what keeps the prerendered
- * markup and the hydrated markup identical. Live figures arrive after mount and
- * every minute after that, skipped while the tab is hidden and caught up as
- * soon as it comes back. A failed poll is deliberately silent: the readout
- * keeps the last numbers it had rather than flashing an error into the hero.
- */
 export function useServerStats(): ServerStats {
   const [stats, setStats] = useState<ServerStats>(SNAPSHOT);
 
@@ -36,7 +26,7 @@ export function useServerStats(): ServerStats {
         const next = parseStats(await response.json());
         if (next && !controller.signal.aborted) setStats(next);
       } catch {
-        // Unreachable, timed out, or aborted on unmount. Nothing to say.
+        return;
       }
     };
 

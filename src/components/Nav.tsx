@@ -17,14 +17,11 @@ import { Logo } from "./ui/Logo";
 type NavItem = {
   href: string;
   label: string;
-  /** Home page sections this item spies on. Empty for links to another route. */
   sections: string[];
-  /** Set when the item leads to a whole page rather than an anchor. */
   route?: Route;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "#footage", label: "Footage", sections: ["footage"] },
   {
     href: "#servers",
     label: "Servers",
@@ -50,11 +47,9 @@ export function Nav({ route = "home" }: { route?: Route }) {
   const scrolled = useScrolled();
 
   const base = anchorBase(route);
-  /** Section spying only means something on the page that owns those sections. */
   const onHome = route === "home";
   const visible = !onHome || scrolled || open || focusWithin;
 
-  /** Hash items point back at the home page when read from another route. */
   const hrefOf = (item: NavItem) =>
     item.route ? item.href : `${base}${item.href}`;
 
@@ -92,8 +87,6 @@ export function Nav({ route = "home" }: { route?: Route }) {
         visible ? "translate-y-0" : "-translate-y-full"
       }`}
     >
-      {/* gap tightens at lg: the nav appears there, and logo + links + actions
-          only just fit 1024px. It relaxes again once xl has room to spare. */}
       <div className="mx-auto flex h-[var(--nav-h)] max-w-shell items-center justify-between gap-3 px-4 sm:px-6 lg:gap-4 lg:px-10 xl:gap-6">
         <a
           href={onHome ? "#top" : "/"}

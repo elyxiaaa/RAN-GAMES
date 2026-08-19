@@ -1,12 +1,3 @@
-/**
- * GET /api/ranking/league?category=... -- the league standings board.
- *
- * `category` is the only parameter a caller may set, and only to one of the
- * codes the game server accepts (server/routes.ts). Page and page size are
- * pinned: the board is at most 50 rows, so one call fetches all of it and the
- * client pages and searches that list locally.
- */
-
 import { proxyJson, type ProxyContext } from "../../../server/proxy.ts";
 import { ROUTES, UPSTREAM_ORIGIN } from "../../../server/routes.ts";
 

@@ -6,7 +6,6 @@ const root = resolve(import.meta.dirname, "..");
 const serverEntry = resolve(root, "dist-ssr/entry-server.js");
 const MOUNT = '<div id="root"></div>';
 
-/** Keep in step with build.rollupOptions.input in vite.config.ts. */
 const ROUTES = [
   { path: "/", file: "dist/index.html" },
   { path: "/ranking", file: "dist/ranking.html" },

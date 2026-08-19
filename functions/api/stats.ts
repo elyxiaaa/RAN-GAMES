@@ -1,11 +1,3 @@
-/**
- * GET /api/stats -- live character and online counts.
- *
- * The work is in server/proxy.ts; the route's shape is in server/routes.ts.
- * See the "Live server stats" section of the README for why the browser calls
- * this site's own origin instead of the game server directly.
- */
-
 import { proxyJson, type ProxyContext } from "../../server/proxy.ts";
 import { ROUTES, UPSTREAM_ORIGIN } from "../../server/routes.ts";
 

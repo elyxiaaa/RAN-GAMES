@@ -12,9 +12,6 @@ import { Reveal } from "./ui/Reveal";
 import { SectionHeading } from "./ui/SectionHeading";
 
 export function ServerInfo() {
-  // There is one channel today. Reading the rest off the end of the array keeps
-  // the section working if a second one is ever added, rather than crashing on a
-  // realm that is not there.
   const [flagship, ...rest] = REALMS;
   const alone = rest.length === 0;
 
@@ -37,7 +34,6 @@ export function ServerInfo() {
                 className="notch-sm flex flex-col-reverse gap-2.5 border border-burgundy-900 bg-ink p-5 sm:p-6"
               >
                 <dt className="label text-[10px] text-rose">{stat.label}</dt>
-                {/* Figures shout, phrases speak. Both sit on the same baseline. */}
                 <dd
                   className={`stat-num leading-none ${
                     stat.phrase
@@ -88,7 +84,6 @@ function RealmTile({
 }: {
   realm: Realm;
   featured?: boolean;
-  /** Set when the tile owns the full row, so six specs fit on one line. */
   wide?: boolean;
 }) {
   const live = realm.status === "live";

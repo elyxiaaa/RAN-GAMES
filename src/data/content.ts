@@ -1,9 +1,7 @@
 export const BRAND = {
   name: "RAN ONLINE",
   suffix: "E-GAMES",
-  /** Display form, for the uppercase hero mark. */
   episode: "EPISODE 6",
-  /** Prose form, for alt text, media titles and anything read aloud. */
   episodeName: "Episode 6",
   logoSrc: "/images/main-logo.webp" as string | null,
 };
@@ -11,9 +9,10 @@ export const BRAND = {
 export const LINKS = {
   facebook: "https://www.facebook.com/RanOnlineEGamesOfficial",
   discord: "https://discord.gg/QJJhF7Mfw",
-  client: "#download",
-  mirror1: "#download",
-  mirror2: "#download",
+  client:
+    "https://drive.google.com/file/d/1EJ16Gh1XB9v8ogxzEN8MZyFN17hvrmR7/",
+  mirror:
+    "https://www.mediafire.com/file/zay6mw46gjri99i/RanOnlineEGamesInstaller.exe/file",
   trailer: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 };
 
@@ -41,11 +40,6 @@ export const HERO_COPY = {
   tagline: "Pure hunt. Player run economy. Zero pay to win.",
 };
 
-/**
- * The three schools. `code` is the key the game server uses for them, so the
- * hero readout can line a live count up with the right crest. The counts live
- * in src/data/stats.ts, never here: this file is copy and art.
- */
 export const FACTIONS = [
   {
     id: "sacred-gate",
@@ -65,12 +59,6 @@ export const FACTIONS = [
     code: "PHX",
     crest: "/images/PHNX.webp",
   },
-] as const;
-
-export const LIVE_STATS = [
-  { id: "online", label: "Players online", value: 12847, format: "int" },
-  { id: "peak", label: "Peak today", value: 18402, format: "int" },
-  { id: "parties", label: "Parties hunting", value: 1136, format: "int" },
 ] as const;
 
 export const SHOWCASE = [
@@ -101,10 +89,6 @@ export const SHOWCASE = [
   },
 ];
 
-/**
- * The headline configuration. `phrase` marks a value that reads as words rather
- * than a figure, so the tile drops to a size the words actually fit in.
- */
 export const SERVER_STATS: {
   id: string;
   value: string;
@@ -138,11 +122,6 @@ export type Realm = {
   specs: { label: string; value: string }[];
 };
 
-/**
- * One channel, and there is no second one planned. The array shape stays because
- * the schema graph, llms.txt and the section layout all read from it, and each
- * copes with any number of entries.
- */
 export const REALMS: Realm[] = [
   {
     id: "channel-0",
@@ -161,11 +140,6 @@ export const REALMS: Realm[] = [
   },
 ];
 
-/**
- * `numbers` renders a row of large figures, `list` renders labelled paragraphs.
- * Rates used to be the one `numbers` cluster; they now live in SERVER_STATS, and
- * the renderer keeps both kinds so a future cluster can use either.
- */
 export type FeatureCluster = {
   id: string;
   heading: string;

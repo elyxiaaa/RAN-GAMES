@@ -30,7 +30,6 @@ import { FILTER_ICON } from "./icons";
 import { GuildLevelMark } from "./marks";
 import { QUERY_MAX, useBoardState } from "./useBoardState";
 
-/** Height of the sticky tab strip, so the filter rail can sit below it. */
 const TABS_H = "52px";
 const RAIL_TOP = `calc(var(--nav-h) + ${TABS_H} + 2rem)`;
 
@@ -45,7 +44,6 @@ export function RankingBoard() {
   const activeFilter =
     CLASS_FILTERS.find((entry) => entry.id === state.filter) ?? CLASS_FILTERS[0];
 
-  /** Null on boards whose endpoint takes no class category. */
   const filters = board.categories;
 
   const live = useBoardRows(board.id, state.filter, filters !== null);
@@ -63,9 +61,6 @@ export function RankingBoard() {
   const visible = matched.slice(start, start + PAGE_SIZE);
   const noun = board.id === "guild" ? "guilds" : "fighters";
 
-  // Paging or switching board replaces everything below the fold. If the table
-  // has scrolled past the top of the panel, bring the panel back into view so
-  // the new rows start where the eye already is.
   const view = `${board.id}:${state.filter}:${page}`;
   const lastView = useRef(view);
 
@@ -89,8 +84,6 @@ export function RankingBoard() {
   };
 
   const onTabKeys = (event: KeyboardEvent<HTMLElement>) => {
-    // Only selectable boards take part: a tab marked "Soon" carries no data-nav
-    // and cannot be arrowed onto.
     const open = BOARDS.filter((entry) => !entry.soon);
     const index = open.findIndex((entry) => entry.id === board.id);
     const next = moveIndex(event.key, index, open.length, "horizontal");
@@ -103,8 +96,6 @@ export function RankingBoard() {
 
   return (
     <section id="board" className="bg-ink pb-20 lg:pb-28">
-      {/* Sticks under the header bar so the boards stay switchable while a table
-          scrolls past. */}
       <div className="sticky top-[var(--nav-h)] z-30 border-y border-burgundy-900 bg-ink/95 backdrop-blur-md">
         <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-10">
           <div
@@ -214,12 +205,7 @@ export function RankingBoard() {
           />
         </header>
 
-        {/* The rail keeps its column on every board, so switching tabs never
-            shifts the table sideways. */}
         <div className="grid gap-8 lg:grid-cols-[210px_minmax(0,1fr)]">
-          {/* min-w-0: a grid item defaults to min-width:auto, so without this the
-              rail cannot shrink below its own min-content and the whole page
-              widens to fit seven filter buttons instead of scrolling them. */}
           <div
             className="min-w-0 lg:sticky lg:self-start"
             style={{ top: RAIL_TOP }}
@@ -290,24 +276,17 @@ export function RankingBoard() {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Left rail                                                                 */
-/* -------------------------------------------------------------------------- */
-
 function ClassRail({
   options,
   value,
   onChange,
 }: {
-  /** Filters this board's endpoint accepts. Not every board takes all seven. */
   options: ClassFilterId[];
   value: ClassFilterId;
   onChange: (next: ClassFilterId) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // Filtered from the full list rather than built from it, so the rail keeps
-  // one running order no matter which subset a board offers.
   const entries = CLASS_FILTERS.filter((entry) => options.includes(entry.id));
 
   const onKeys = (event: KeyboardEvent<HTMLElement>) => {
@@ -340,8 +319,6 @@ function ClassRail({
             role="radio"
             data-nav
             aria-checked={active}
-            // The label shortens at small widths, so the name comes from here
-            // instead of whichever span happens to be visible.
             aria-label={entry.label}
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(entry.id)}
@@ -393,7 +370,6 @@ function Legend({
   );
 }
 
-/** The gold column is abbreviated, so the rail spells the units out. */
 function GoldLegend() {
   const units = [
     { symbol: "B", label: "Billions" },
@@ -417,7 +393,6 @@ function GoldLegend() {
   );
 }
 
-/** The guild board's Level column holds a letter grade, which needs a key. */
 function GuildLegend() {
   const levels = Array.from({ length: GUILD_LEVEL_MAX + 1 }, (_, i) =>
     GUILD_LEVEL_MAX - i,
@@ -439,10 +414,6 @@ function GuildLegend() {
     </Legend>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Controls                                                                  */
-/* -------------------------------------------------------------------------- */
 
 function Search({
   value,
@@ -484,8 +455,6 @@ function Search({
           autoCapitalize="off"
           enterKeyHint="search"
           maxLength={QUERY_MAX}
-          // self-stretch: without it the input is only as tall as its text,
-          // leaving most of the bar untappable on a touch screen.
           className="min-w-0 flex-1 self-stretch bg-transparent text-[14px] text-blush outline-none placeholder:text-rose/85 [&::-webkit-search-cancel-button]:hidden"
         />
         <button
@@ -614,7 +583,6 @@ function PageStep({
   );
 }
 
-/** Page numbers around the current one, with ellipses standing in for the rest. */
 function pageSlots(page: number, pages: number): (number | null)[] {
   if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
 
@@ -632,10 +600,6 @@ function pageSlots(page: number, pages: number): (number | null)[] {
   return out;
 }
 
-/**
- * Stand-in rows while the board is in flight. The widths are a fixed list, not
- * random, so the prerendered markup and the hydrated markup agree.
- */
 const SKELETON_WIDTHS = [
   "58%", "43%", "66%", "50%", "71%", "46%", "62%", "54%", "68%", "45%",
 ];
@@ -666,7 +630,6 @@ function BoardSkeleton() {
   );
 }
 
-/** The board was reachable but the game server was not. */
 function Unavailable({ onRetry }: { onRetry: () => void }) {
   return (
     <div
@@ -731,7 +694,6 @@ function Empty({
   );
 }
 
-/** Roving selection for the tab strip and the class rail. */
 function moveIndex(
   key: string,
   index: number,

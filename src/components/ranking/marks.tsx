@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { Crown, ShieldChevron } from "@phosphor-icons/react";
-import { guildIconUrl } from "../../data/boards";
+import { Crown } from "@phosphor-icons/react";
 import {
   CLASSES,
   GUILD_LEVEL_MAX,
@@ -12,7 +10,6 @@ import {
   type SchoolId,
 } from "../../data/ranking";
 
-/** Rank number. The first three seats carry the crimson, everything else reads quiet. */
 export function RankMark({ rank }: { rank: number }) {
   const podium = rank <= 3;
 
@@ -37,10 +34,6 @@ export function RankMark({ rank }: { rank: number }) {
   );
 }
 
-/**
- * The game's own class portrait, one per class and body. Decorative: every
- * place it appears sits next to the class name in text.
- */
 export function ClassIcon({
   classId,
   gender,
@@ -116,7 +109,10 @@ export function GuildTag({ guild }: { guild: string | null }) {
   }
 
   return (
-    <span className="inline-flex max-w-full items-center gap-1 text-[13px] text-blush/85">
+    <span
+      className="inline-flex max-w-full items-center gap-1 text-[13px] text-blush/85"
+      title={guild}
+    >
       <span aria-hidden="true" className="text-crimson-hot/80">
         [
       </span>
@@ -128,11 +124,6 @@ export function GuildTag({ guild }: { guild: string | null }) {
   );
 }
 
-/**
- * Guild level styling. The server reports a plain 0 to 5 in `guRank`, so that
- * is what is shown: the letter grades this once carried were invented by the
- * placeholder data and match nothing a player sees in game.
- */
 function levelStyle(level: number): string {
   if (level >= GUILD_LEVEL_MAX) {
     return "border-crimson bg-crimson/15 text-crimson-hot";
@@ -153,70 +144,6 @@ export function GuildLevelMark({ level }: { level: number }) {
   );
 }
 
-/**
- * Guild emblem: the bitmap the guild drew in game, fetched by guild number.
- *
- * Unbadged guilds show the game's own `[?]` placeholder. A badged guild whose
- * emblem will not load falls back to the generic mark rather than a broken
- * image, so the board stays readable while that one endpoint is unreachable.
- */
-export function BadgeMark({
-  badge,
-  level,
-  guNum,
-  guild,
-}: {
-  badge: boolean;
-  level: number;
-  guNum: number;
-  guild: string;
-}) {
-  const [failed, setFailed] = useState(false);
-
-  if (!badge) {
-    return (
-      <span
-        className="label inline-flex h-7 w-7 items-center justify-center border border-burgundy-900 text-[10px] text-rose"
-        title="No emblem set"
-      >
-        ?
-      </span>
-    );
-  }
-
-  const frame = `notch-sm inline-flex h-7 w-7 items-center justify-center border ${
-    level >= 4
-      ? "border-crimson/60 bg-crimson/15 text-crimson-hot"
-      : "border-burgundy-700 bg-burgundy-900/70 text-blush/80"
-  }`;
-
-  return (
-    <span className={frame} title={`${guild} emblem`}>
-      {failed ? (
-        <ShieldChevron size={15} weight="fill" aria-hidden="true" />
-      ) : (
-        <img
-          src={guildIconUrl(guNum)}
-          alt=""
-          aria-hidden="true"
-          width={18}
-          height={18}
-          loading="lazy"
-          decoding="async"
-          onError={() => setFailed(true)}
-          // Emblems are tiny bitmaps drawn pixel by pixel in game. Letting the
-          // browser smooth one on the way up turns pixel art into mush.
-          className="block h-[18px] w-[18px] [image-rendering:pixelated]"
-        />
-      )}
-    </span>
-  );
-}
-
-/**
- * The game's two toned score: gains in green, losses in red, split by a dash.
- * Used for league wins/losses and PK kills/deaths.
- */
 export function ScoreSplit({
   gain,
   loss,

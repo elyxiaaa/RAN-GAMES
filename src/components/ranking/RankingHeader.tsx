@@ -8,9 +8,6 @@ import { LiveBadge } from "../ui/LiveBadge";
 export function RankingHeader() {
   const stats = useServerStats();
 
-  // Guilds are the one ranking figure that is a real count: the player boards
-  // cap `total` at 50, so "ranked fighters" cannot be sourced from them at all.
-  // The board itself shares this fetch through the hook's cache.
   const guilds = useBoardRows("guild", "all", false);
 
   const tiles: { id: string; label: string; value: number | null }[] = [
@@ -97,8 +94,6 @@ export function RankingHeader() {
               >
                 <dt className="label text-[10px] text-rose">{tile.label}</dt>
                 <dd className="stat-num text-[28px] leading-none lg:text-[30px]">
-                  {/* An em dash rather than a zero: the count is not in yet,
-                      and a zero would read as a real answer. */}
                   {tile.value === null ? "—" : formatInt(tile.value)}
                 </dd>
               </div>

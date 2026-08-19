@@ -1,8 +1,3 @@
-/**
- * GET /api/ranking/mmr -- see server/routes.ts for the parameters this
- * accepts and server/proxy.ts for the caching and allowlisting around it.
- */
-
 import { proxyJson, type ProxyContext } from "../../../server/proxy.ts";
 import { ROUTES, UPSTREAM_ORIGIN } from "../../../server/routes.ts";
 
